@@ -1,8 +1,8 @@
 # saspy
 Slots accounting system protocol based on Python for arm architecture
 
-These SAS library was made using python and can be used for linux-based single-board computers (Raspberry, Orange PI, Banana Pi).
-The library is used for connecting to EGM by RS-232 protocol and for receiving and processing some data of SAS-protocol.
+The SAS library was made using python and can be used for linux-based single-board computers (Raspberry, Orange PI, Banana Pi).
+The Library is used for connecting to EGM by RS-232 protocol and for receiving and processing some data of SAS-protocol.
 
 SAS  (Slot  Accounting  System)  protocol  is  the  de  facto  casino communications  standards  designed  to  automate  slot  machine  meter  reporting  and event  logging,  player  tracking,  bonusing,  ticketing  and  cashless  gaming. 
 
