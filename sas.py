@@ -10,7 +10,8 @@ from array import array
 #ser = serial.Serial('/dev/ttyS3','19200', timeout=1)  # open first serial port
 data_to_sent=[0x01, 0x21, 0x00, 0x00]
 #adress=1
-#print "OK"
+#print "OK
+PARYTY_CHANGE = True
 meters = dict.fromkeys(('total_cancelled_credits_meter',
                 'total_in_meter',
                 'total_out_meter',
@@ -267,7 +268,19 @@ class sas(object):
                 
                 
                 return True
+
+        def __events_port_conf(self):
+            self.connection.close()
+            self.connection.parity = serial.PARITY_NONE
+            self.connection.stopbits = serial.STOPBITS_TWO
+            self.connection.open()
         
+        def __port_conf(self):
+            self.connection.close()
+            self.connection.parity = serial.PARITY_SPACE
+            self.connection.stopbits = serial.STOPBITS_ONE
+            self.connection.open()
+
         def __send_command( self, command, no_response=False, timeout=3, crc_need=True):
                 busy = True
                 response=b''
@@ -358,6 +371,8 @@ class sas(object):
 ##                return 
         
         def events_poll(self, timeout=1):
+                if PARYTY_CHANGE == True:
+                    self.__events_port_conf()
                 event=''
                 cmd=[0x80+self.adress]
                 try:
@@ -372,7 +387,9 @@ class sas(object):
 
                 except Exception as e:
                         print e
-                        return None
+                        event = None
+                if PARYTY_CHANGE == True:
+                    self.__port_conf()
                 return event
         
         
