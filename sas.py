@@ -1,35 +1,31 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
-# import bcd
 import serial
 import time
 import binascii
 
-# import string
 from PyCRC.CRC16Kermit import CRC16Kermit
 from array import array
 
-# ser = serial.Serial('/dev/ttyS3','19200', timeout=1)  # open first serial port
-data_to_sent = [0x01, 0x21, 0x00, 0x00]
-# adress=1
-# print "OK"
 from multiprocessing import log_to_stderr
 import logging
 import datetime
 
 EVENTS_POLL_TIMEOUT = 0.2
-# SLEEP_IF_FORMAT_TRANSACTION = 0
+
 AFT_LOCK_STATUS = {
     "00": "Game locked",
     "40": "Game lock pending",
     "ff": "Game not locked",
 }
+
 AFT_REGISTRACION_STATUS = {
     "00": "Gaming machine registration ready",
     "01": "Gaming machine registered",
     "40": "Gaming machine registration pending",
     "80": "Gaming machine not registered",
 }
+
 AFT_TRANSFER_STATUS = {
     "00": "Full transfer successful",
     "01": "Partial transfer successful Binary codes 010xxxxx indicate transfer pending",
@@ -80,6 +76,7 @@ AFT_TRANSFER_TYPE = {
     "80": "Transfer in-house amount from gaming machine to host",
     "90": "Transfer win amount (in-house) from gaming machine to host",
 }
+
 DENOMINATION = {
     "00": None,
     "01": 0.01,
@@ -216,6 +213,7 @@ GPOLL = {
     "9a": "Power off cashbox door access",
     "9b": "Power off drop door access",
 }
+
 meters = dict.fromkeys(
     (
         "total_cancelled_credits_meter",
@@ -343,6 +341,7 @@ meters = dict.fromkeys(
     ),
     [],
 )
+
 aft_statement = dict.fromkeys(
     (
         "registration_status",
@@ -384,6 +383,7 @@ aft_statement = dict.fromkeys(
     ),
     [],
 )
+
 tito_statement = dict.fromkeys(
     (
         "asset_number",
@@ -411,6 +411,7 @@ tito_statement = dict.fromkeys(
 eft_statement = dict.fromkeys(
     ("eft_status", "promo_amount", "cashable_amount", "eft_transfer_counter"), []
 )
+
 game_features = dict.fromkeys(
     (
         "game_number",
@@ -452,13 +453,11 @@ class EMGGpollBadResponse(Exception):
 
 class Sas:
     def __init__(
-        self, port, timeout=2, log=None, poll_adress=0x82, aft_get_last_transaction=True
+        self, port, timeout=2, log=None, poll_adress=0x80, aft_get_last_transaction=True
     ):
-        # self.poll_adres = '82'
         self.adress = None
         self.mashin_n = None
         self.aft_get_last_transaction = aft_get_last_transaction
-        # self.last_transaction_n = None
         self.denom = 0.01
         self.asset_number = "01000000"
         self.reg_key = "0000000000000000000000000000000000000000"
@@ -466,10 +465,9 @@ class Sas:
         self.transaction = None
         self.my_key = "44"
         self.poll_adress = poll_adress
-        # self.my_log = file('/home/colibri/dump.log', 'a')
         if log == None:
             self.log = log_to_stderr()
-            self.log.setLevel(logging.INFO)
+            self.log.setLevel(logging.DEBUG)
         else:
             self.log = log
         while 1:
@@ -504,7 +502,6 @@ class Sas:
         self.log.info("Connecting SAS...")
         while True:
             if self.is_open() == False:
-                # self.log.error('Port not open')
                 try:
                     self.open()
                     if self.is_open() == False:
@@ -520,10 +517,9 @@ class Sas:
                 if response == None:
                     self.log.error("No SAS Connection")
                     time.sleep(1)
-                if response != "":
+                if response != b"":
                     self.adress = int(binascii.hexlify(response))
-                    # if self.adress >= 1:
-                    self.mashin_n = response.encode("HEX")
+                    self.mashin_n = response.hex()
                     self.log.info("adress recognised " + str(self.adress))
                     break
                 else:
@@ -594,43 +590,26 @@ class Sas:
     def _send_command(
         self, command, no_response=False, timeout=None, crc_need=True, size=1
     ):
-        # if timeout == None:
-        #     timeout = self.timeout + 1
-        # time.sleep(0.04)
         busy = True
         response = b""
-        # self.my_log.flush()
         try:
-            # if self.poll_adres == '82':
-            #     self.poll_adres = '80'
-            # else:
-            #     self.poll_adres = '82'
-
             buf_header = [self.adress]
             self._conf_port()
-            # self.connection.flushInput()
-            # self.connection.write(('80' + self.mashin_n).decode("hex"))
-            # self.close()
-            # self.connection.parity = serial.PARITY_SPACE
-            # self.open()
 
             buf_header.extend(command)
             buf_count = len(command)
-            # buf_header[2]=buf_count+2
+
             if crc_need == True:
                 crc = CRC16Kermit().calculate(str(bytearray(buf_header)))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
+
             self.log.debug(buf_header)
-            # time.sleep(0.04)
             self.connection.write([self.poll_adress, self.adress])
             self.close()
+
             self.connection.parity = serial.PARITY_SPACE
             self.open()
-            # self.connection.flushInput()
-            # my_log = open('/home/colibri/dump.log', 'w')
-            # self.my_log.write('TX %s: %s\n' % (time.time(), '82'+ binascii.hexlify(bytearray(buf_header))))
-            # print self.connection.portstr
-            # self.connection.write([0x31, 0x32,0x33,0x34,0x35])
+
             self.connection.write((buf_header[1:]))
 
         except Exception as e:
@@ -638,11 +617,8 @@ class Sas:
 
         try:
             buffer = []
-            #            self.connection.flushInput()
-            # time.sleep(0.04)
-            # t = time.time()
-            # while time.time() - t < timeout:
             response = self.connection.read(size)
+            print(response)
             if no_response == True:
                 try:
                     return int(binascii.hexlify(response))
@@ -664,16 +640,9 @@ class Sas:
 
     def checkResponse(self, rsp):
         if rsp == "":
-            # self.flush()
-            # self.close()
             raise NoSasConnection
-            # return False
 
         resp = bytearray(rsp)
-        # print resp
-        # if (resp[0] <> self.adress):
-        #     self.log.error("wrong ardess or NACK")
-        #     raise BadCRC
 
         CRC = binascii.hexlify(resp[-2:])
 
@@ -688,60 +657,31 @@ class Sas:
         while len(crc1) < 4:
             crc1 = "0" + crc1
 
-        # print crc1
-        # print CRC
         if CRC != crc1:
-            # print "Wrong response command hash " + str(CRC)
-            # print    "////" + str(hex(crc1).split('x')[-1])
-            # print    "////" + str(binascii.hexlify(command))
             raise BadCRC(binascii.hexlify(resp))
-            # return False
         elif CRC == crc1:
-            # self.my_log.write('RX %s: %s\n' % (time.time(), binascii.hexlify(resp)))
             return data
         raise BadCRC(binascii.hexlify(resp))
-
-    ##    def check_crc(self):
-    ##        cmd=[0x01, 0x50, 0x81]
-    ##        cmd=bytearray(cmd)
-    ##        #print self.sas_CRC([0x01, 0x50, 0x81])
-    ##        #print ('\\'+'\\'.join(hex(e)[1:] for e in cmd))
-    ##
-    ##        print (CRC16Kermit().calculate(str(cmd)))
-    ##        return
 
     def events_poll(self, timeout=EVENTS_POLL_TIMEOUT, **kwargs):
         self._conf_event_port()
         event = ""
-        # self.my_log.write('TX %s: %s\n' % (time.time(), '8281'))
-        # time.sleep(0.04)
         cmd = [0x80 + self.adress]
         self.connection.write([self.poll_adress])
         try:
             self.connection.write(cmd)
-            # t = time.time()
-            # while time.time() - t < timeout:
-            # print "time"+ str(time.time()-t)
             event = self.connection.read(1)
-            # if event != '':
-            #     break
             if event == "":
                 raise NoSasConnection
-                # event = None
-                # return None
-            # self.my_log.write('RX %s: %s\n' % (time.time(), event.encode('hex')))
-            # self.my_log.flush()
             event = GPOLL[event.encode("hex")]
         except KeyError as e:
             raise EMGGpollBadResponse
         except Exception as e:
             raise e
-        # self._conf_port()
         return event
 
     def shutdown(self, **kwargs):
         # 01
-        # print "1"
 
         if self._send_command([0x01], True, crc_need=True) == self.adress:
             return True
@@ -752,6 +692,7 @@ class Sas:
     def startup(self, **kwargs):
         # 02
         # cmd=[0x02]
+
         if self._send_command([0x02], True, crc_need=True) == self.adress:
             return True
         else:
@@ -760,6 +701,7 @@ class Sas:
 
     def sound_off(self, **kwargs):
         # 03
+
         if self._send_command([0x03], True, crc_need=True) == self.adress:
             return True
         else:
@@ -768,6 +710,7 @@ class Sas:
 
     def sound_on(self, **kwargs):
         # 04
+
         if self._send_command([0x04], True, crc_need=True) == self.adress:
             return True
         else:
@@ -817,6 +760,7 @@ class Sas:
     def en_dis_game(self, game_number=None, en_dis=False, **kwargs):
         if game_number == None:
             game_number = self.selected_game_number()
+            print(game_number)
         game = int(game_number, 16)
         if en_dis == True:
             en_dis = [0]
@@ -1158,26 +1102,10 @@ class Sas:
             return meters
         return None
 
-    def gaming_machine_ID(self, **kwargs):
+    def gaming_machine_ID(self):
         # 1F
         cmd = [0x1F]
-        data = self._send_command(cmd, crc_need=False, size=24)
-        if data != None:
-            denom = DENOMINATION[binascii.hexlify(bytearray(data[6:7]))]
-            self.log.info("addenomination recognised " + str(denom))
-            self.denom = denom
-            return denom
-            # meters['ASCII_game_ID']=(((data[1:3])))
-            # meters['ASCII_additional_ID']=(((data[3:6])))
-            # meters['bin_denomination']=int(binascii.hexlify(bytearray(data[4:5])))
-            # meters['bin_max_bet']=(binascii.hexlify(bytearray(data[7:8])))
-            # meters['bin_progressive_mode']=int(binascii.hexlify(bytearray(data[8:9])))
-            # meters['bin_game_options']=(binascii.hexlify(bytearray(data[9:11])))
-            # meters['ASCII_paytable_ID']=(((data[11:17])))
-            # meters['ASCII_base_percentage']=(((data[17:21])))
-
-            # return data
-        return None
+        return self._send_command(cmd, True, crc_need=False)
 
     def total_dollar_value_of_bills_meter(self, **kwargs):
         # 20
@@ -3199,12 +3127,12 @@ class SAS_USB(Sas):
         return None
 
 
-"""
-if __name__ == '__main__':
-    sas = Sas('/dev/ttyS1')
-    print sas.start()
-    print sas.gaming_machine_ID()
-    print sas.AFT_get_last_transaction()
-    print sas.AFT_in(0.05)
-    print sas.AFT_clean_transaction_poll()
-"""
+if __name__ == "__main__":
+    sas = Sas("/dev/ttyUSB0")
+    print(sas.start())
+    print(sas.gaming_machine_ID())
+    # print(sas.enter_maintenance_mode())
+    # print(sas.en_dis_game(None, True))
+    # print sas.AFT_get_last_transaction()
+    # print sas.AFT_in(0.05)
+    # print sas.AFT_clean_transaction_poll()
