@@ -600,7 +600,7 @@ class Sas:
             buf_count = len(command)
 
             if crc_need == True:
-                crc = CRC16Kermit().calculate(str(bytearray(buf_header)))
+                crc = CRC16Kermit().calculate(bytearray(buf_header).decode('utf-8'))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.log.debug(buf_header)
@@ -618,7 +618,7 @@ class Sas:
         try:
             buffer = []
             response = self.connection.read(size)
-            print(response)
+            
             if no_response == True:
                 try:
                     return int(binascii.hexlify(response))
@@ -627,11 +627,15 @@ class Sas:
                     return None
 
             busy = False
+            
             response = self.checkResponse(response)
             self.log.debug("sas response %s", binascii.hexlify(response))
+            
             return response
+            
         except BadCRC as e:
             raise e
+            
         except Exception as e:
             self.log.info(e, exc_info=True)
 
@@ -647,20 +651,23 @@ class Sas:
         CRC = binascii.hexlify(resp[-2:])
 
         command = resp[0:-2]
-
-        crc1 = CRC16Kermit().calculate(str(bytearray(command)))
-
+	
+        crc1 = CRC16Kermit().calculate(command.decode('utf-8'))
+	
         data = resp[1:-2]
-
+        
         crc1 = hex(crc1).split("x")[-1]
 
         while len(crc1) < 4:
             crc1 = "0" + crc1
 
+        crc1 = bytes(crc1, 'utf-8')
+	
         if CRC != crc1:
             raise BadCRC(binascii.hexlify(resp))
         elif CRC == crc1:
             return data
+            
         raise BadCRC(binascii.hexlify(resp))
 
     def events_poll(self, timeout=EVENTS_POLL_TIMEOUT, **kwargs):
@@ -761,7 +768,7 @@ class Sas:
         if game_number == None:
             game_number = self.selected_game_number()
             print(game_number)
-        game = int(game_number, 16)
+        game = int(str(game_number), 16)
         if en_dis == True:
             en_dis = [0]
         else:
@@ -1623,7 +1630,6 @@ class Sas:
 
         data = self._send_command(cmd, crc_need=False, size=6)
         if data != None:
-            # meters['selected_game_number']=int(binascii.hexlify(bytearray(data[1:])))
             if in_hex == False:
                 return int(binascii.hexlify(bytearray(data[1:])))
             else:
@@ -3130,7 +3136,11 @@ class SAS_USB(Sas):
 if __name__ == "__main__":
     sas = Sas("/dev/ttyUSB0")
     print(sas.start())
-    print(sas.gaming_machine_ID())
+    print(sas.SAS_version_gaming_machine_serial_ID())
+    print(sas.startup())
+    #mac_id = sas.gaming_machine_ID()
+    #print(sas.selected_game_number(in_hex=False))
+    #print(sas.en_dis_game(mac_id, False))
     # print(sas.enter_maintenance_mode())
     # print(sas.en_dis_game(None, True))
     # print sas.AFT_get_last_transaction()
