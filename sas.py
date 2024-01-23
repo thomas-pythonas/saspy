@@ -3,13 +3,11 @@
 import serial
 import time
 import binascii
-
-from PyCRC.CRC16Kermit import CRC16Kermit
-from array import array
-
-from multiprocessing import log_to_stderr
 import logging
 import datetime
+
+from PyCRC.CRC16Kermit import CRC16Kermit
+from multiprocessing import log_to_stderr
 
 EVENTS_POLL_TIMEOUT = 0.2
 
@@ -19,7 +17,7 @@ AFT_LOCK_STATUS = {
     "ff": "Game not locked",
 }
 
-AFT_REGISTRACION_STATUS = {
+AFT_REGISTRATION_STATUS = {
     "00": "Gaming machine registration ready",
     "01": "Gaming machine registered",
     "40": "Gaming machine registration pending",
@@ -157,8 +155,8 @@ GPOLL = {
     "4c": "$100.00 bill accepted (non-RTE only)",
     "4d": "$2.00 bill accepted (non-RTE only)",
     "4e": "$500.00 bill accepted (non-RTE only)",
-    "4f": "Bill accepted (In non-RTE mode, use this exception for all bills without a specific exception. In RTE mode, use for all bill denominations.)",
-    "50": "$200.00 bill accepted (non-RTE only)",
+    "4f": "Bill accepted", # Non-RTE mode: use this for all bills without explicit denomination. RTE mode: use for all bill denominations.
+    "50": "$200.00 bill accepted", # Non-RTE only
     "51": "Handpay is pending (Progressive, non-progressive or cancelled credits)",
     "52": "Handpay was reset (Jackpot reset switch activated)",
     "53": "No progressive information has been received for 5 seconds",
@@ -287,14 +285,14 @@ meters = dict.fromkeys(
         "validation_system_ID",
         "expiration_date_printed_on_ticket",
         "pool_id",
-        "current_hopper_lenght",
-        "current_hopper_ststus",
+        "current_hopper_length",
+        "current_hopper_status",
         "current_hopper_percent_full",
         "current_hopper_level",
         "bin_validation_type",
         "total_validations",
         "cumulative_amount",
-        "total_number_of_games_impemented",
+        "total_number_of_games_implemented",
         "game_n_number",
         "game_n_coin_in_meter",
         "game_n_coin_out_meter",
@@ -325,9 +323,9 @@ meters = dict.fromkeys(
         "registration_key",
         "POS_ID",
         "game_lock_status",
-        "avilable_transfers",
+        "available_transfers",
         "host_cashout_status",
-        "AFT_ststus",
+        "AFT_status",
         "max_buffer_index",
         "current_cashable_amount",
         "current_restricted_amount",
@@ -357,21 +355,21 @@ aft_statement = dict.fromkeys(
         "nonrestricted_amount",
         "transfer_flags",
         "asset_number",
-        "transaction_ID_lenght",
+        "transaction_ID_length",
         "transaction_ID",
         "transaction_date",
         "transaction_time",
         "expiration",
         "pool_ID",
-        "cumulative_casable_amount_meter_size",
-        "cumulative_casable_amount_meter",
+        "cumulative_cashable_amount_meter_size",
+        "cumulative_cashable_amount_meter",
         "cumulative_restricted_amount_meter_size",
         "cumulative_restricted_amount_meter",
         "cumulative_nonrestricted_amount_meter_size",
         "cumulative_nonrestricted_amount_meter",
         "asset_number",
         "game_lock_status",
-        "avilable_transfers",
+        "available_transfers",
         "host_cashout_status",
         "AFT_status",
         "max_buffer_index",
@@ -388,7 +386,7 @@ tito_statement = dict.fromkeys(
     (
         "asset_number",
         "status_bits",
-        "cashable_ticket_reciept_exp",
+        "cashable_ticket_receipt_exp",
         "restricted_ticket_exp",
         "cashout_ticket_number",
         "cashout_amount_in_cents",
@@ -416,7 +414,7 @@ game_features = dict.fromkeys(
     (
         "game_number",
         "jackpot_multiplier",
-        "AFT_bonus_avards",
+        "AFT_bonus_awards",
         "legacy_bonus_awards",
         "tournament",
         "validation_extensions",
@@ -453,26 +451,27 @@ class EMGGpollBadResponse(Exception):
 
 class Sas:
     def __init__(
-        self, port, timeout=2, log=None, poll_adress=0x80, aft_get_last_transaction=True
+        self, port, timeout=2, log=None
     ):
-        self.adress = None
-        self.mashin_n = None
-        self.aft_get_last_transaction = aft_get_last_transaction
+        self.address = None
+        self.machine_n = None
+        self.aft_get_last_transaction = True
         self.denom = 0.01
         self.asset_number = "01000000"
         self.reg_key = "0000000000000000000000000000000000000000"
-        self.POS_ID = "B374A402"
+        self.pos_id = "B374A402"
         self.transaction = None
         self.my_key = "44"
-        self.poll_adress = poll_adress
-        if log == None:
+        self.poll_address = 0x80
+
+        if not log:
             self.log = log_to_stderr()
             self.log.setLevel(logging.DEBUG)
         else:
             self.log = log
+
         while 1:
             try:
-                # print 1
                 self.connection = serial.Serial(
                     port=port, baudrate=19200, timeout=timeout
                 )
@@ -483,6 +482,7 @@ class Sas:
             except:
                 self.log.critical("SAS Port error")
                 time.sleep(1)
+
         return
 
     def is_open(self):
@@ -490,21 +490,22 @@ class Sas:
 
     def flush(self):
         try:
-            if self.is_open() == False:
+            if not self.is_open():
                 self.open()
             self.connection.flushOutput()
             self.connection.flushInput()
         except Exception as e:
             self.log.error(e, exc_info=True)
+
         self.close()
 
     def start(self):
         self.log.info("Connecting SAS...")
         while True:
-            if self.is_open() == False:
+            if not self.is_open():
                 try:
                     self.open()
-                    if self.is_open() == False:
+                    if not self.is_open():
                         self.log.error("Port not open")
                 except SASOpenError:
                     self.log.critical("No SAS Port")
@@ -514,20 +515,22 @@ class Sas:
                 self.connection.flushOutput()
                 self.connection.flushInput()
                 response = self.connection.read(1)
-                if response == None:
+
+                if not response:
                     self.log.error("No SAS Connection")
                     time.sleep(1)
+
                 if response != b"":
-                    self.adress = int(binascii.hexlify(response))
-                    self.mashin_n = response.hex()
-                    self.log.info("adress recognised " + str(self.adress))
+                    self.address = int(binascii.hexlify(response))
+                    self.machine_n = response.hex()
+                    self.log.info("address recognised " + str(self.address))
                     break
                 else:
                     self.log.error("No SAS Connection")
                     time.sleep(1)
 
         self.close()
-        return self.mashin_n
+        return self.machine_n
 
     def close(self):
         self.connection.close()
@@ -535,8 +538,8 @@ class Sas:
     def open(self):
         try:
             self.connection.open()
-        except:
-            raise SASOpenError
+        except Exception as e:
+            raise SASOpenError(e)
 
     def _conf_event_port(self):
         self.close()
@@ -552,9 +555,10 @@ class Sas:
         self.connection.stopbits = serial.STOPBITS_ONE
         self.open()
 
-    def crc(self, response, chk=False, seed=0):
+    @staticmethod
+    def _crc(response, chk=False, seed=0):
         c = ""
-        if chk != False:
+        if chk:
             crc = response[-4:]
             response = response[:-4]
 
@@ -576,35 +580,32 @@ class Sas:
             data = data[0:2] + "000" + data[2:]
         elif len(data) == 2:
             data = data[0:2] + "0000"
-        if chk == False:
+        if not chk:
             data = data[4:] + data[2:-2]
         #            pass
         else:
             data = data[4:] + data[2:-2]
-            if data == crc:
+            if data == chk:
                 return True
             else:
                 raise BadCRC(response)
+
         return data
 
     def _send_command(
         self, command, no_response=False, timeout=None, crc_need=True, size=1
     ):
-        busy = True
-        response = b""
         try:
-            buf_header = [self.adress]
+            buf_header = [self.address]
             self._conf_port()
 
             buf_header.extend(command)
-            buf_count = len(command)
 
-            if crc_need == True:
+            if crc_need:
                 crc = CRC16Kermit().calculate(bytearray(buf_header).decode('utf-8'))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
-            self.log.debug(buf_header)
-            self.connection.write([self.poll_adress, self.adress])
+            self.connection.write([self.poll_address, self.address])
             self.close()
 
             self.connection.parity = serial.PARITY_SPACE
@@ -616,19 +617,16 @@ class Sas:
             self.log.error(e, exc_info=True)
 
         try:
-            buffer = []
             response = self.connection.read(size)
             
-            if no_response == True:
+            if no_response:
                 try:
                     return int(binascii.hexlify(response))
                 except ValueError as e:
                     self.log.warning("no sas response %s" % (str(buf_header[1:])))
                     return None
-
-            busy = False
             
-            response = self.checkResponse(response)
+            response = self.check_response(response)
             self.log.debug("sas response %s", binascii.hexlify(response))
             
             return response
@@ -639,48 +637,43 @@ class Sas:
         except Exception as e:
             self.log.info(e, exc_info=True)
 
-        busy = False
         return None
 
-    def checkResponse(self, rsp):
+    @staticmethod
+    def check_response(rsp):
         if rsp == "":
             raise NoSasConnection
 
         resp = bytearray(rsp)
-
-        CRC = binascii.hexlify(resp[-2:])
-
+        tmp_crc = binascii.hexlify(resp[-2:])
         command = resp[0:-2]
-	
         crc1 = CRC16Kermit().calculate(command.decode('utf-8'))
-	
         data = resp[1:-2]
-        
         crc1 = hex(crc1).split("x")[-1]
-
         while len(crc1) < 4:
             crc1 = "0" + crc1
 
         crc1 = bytes(crc1, 'utf-8')
-	
-        if CRC != crc1:
+
+        if tmp_crc != crc1:
             raise BadCRC(binascii.hexlify(resp))
-        elif CRC == crc1:
+        elif tmp_crc == crc1:
             return data
             
         raise BadCRC(binascii.hexlify(resp))
 
     def events_poll(self, timeout=EVENTS_POLL_TIMEOUT, **kwargs):
         self._conf_event_port()
-        event = ""
-        cmd = [0x80 + self.adress]
-        self.connection.write([self.poll_adress])
+
+        cmd = [0x80 + self.address]
+        self.connection.write([self.poll_address])
+
         try:
             self.connection.write(cmd)
             event = self.connection.read(1)
             if event == "":
                 raise NoSasConnection
-            event = GPOLL[event.encode("hex")]
+            event = GPOLL[event.hex()]
         except KeyError as e:
             raise EMGGpollBadResponse
         except Exception as e:
@@ -688,138 +681,122 @@ class Sas:
         return event
 
     def shutdown(self, **kwargs):
-        # 01
-
-        if self._send_command([0x01], True, crc_need=True) == self.adress:
+        # [0x01]
+        if self._send_command([0x01], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def startup(self, **kwargs):
-        # 02
-        # cmd=[0x02]
-
-        if self._send_command([0x02], True, crc_need=True) == self.adress:
+        # [0x02]
+        if self._send_command([0x02], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def sound_off(self, **kwargs):
-        # 03
-
-        if self._send_command([0x03], True, crc_need=True) == self.adress:
+        # [0x03]
+        if self._send_command([0x03], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def sound_on(self, **kwargs):
-        # 04
-
-        if self._send_command([0x04], True, crc_need=True) == self.adress:
+        # [0x04]
+        if self._send_command([0x04], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def reel_spin_game_sounds_disabled(self, **kwargs):
-        # 05
-        if self._send_command([0x05], True, crc_need=True) == self.adress:
+        # [0x05]
+        if self._send_command([0x05], True, crc_need=True) == self.address:
             return True
-        else:
-            return None
-        return None
+
+        return False
 
     def enable_bill_acceptor(self, **kwargs):
-        # 06
-        if self._send_command([0x06], True, crc_need=True) == self.adress:
+        # [0x06]
+        if self._send_command([0x06], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def disable_bill_acceptor(self, **kwargs):
-        # 07
-        if self._send_command([0x07], True, crc_need=True) == self.adress:
+        # [0x07]
+        if self._send_command([0x07], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def configure_bill_denom(
         self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF], **kwargs
     ):
-        # 08
         cmd = [0x08, 0x00]
-        ##print str(hex(bill_denom))
-        s = "00ffffff"
-        # print bytes.fromhex(((s)))
         cmd.extend(bill_denom)
         cmd.extend(action_flag)
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return None
+
+        return False
 
     def en_dis_game(self, game_number=None, en_dis=False, **kwargs):
-        if game_number == None:
+        if not game_number:
             game_number = self.selected_game_number()
-            print(game_number)
+
         game = int(str(game_number), 16)
-        if en_dis == True:
+
+        if en_dis:
             en_dis = [0]
         else:
             en_dis = [1]
+
         cmd = [0x09]
 
         cmd.extend([((game >> 8) & 0xFF), (game & 0xFF)])
         cmd.extend(bytearray(en_dis))
-        # print cmd
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
-            return game_number
-        # else:
-        return None
-        # return None
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
 
     def enter_maintenance_mode(self, **kwargs):
-        # 0A
-        if self._send_command([0x0A], True, crc_need=True) == self.adress:
+        # [0x0A]
+        if self._send_command([0x0A], True, crc_need=True) == self.address:
             return True
-        else:
-            return None
-        # return None
 
-    def exit_maintanance_mode(self, **kwargs):
-        # 0B
-        if self._send_command([0x0B], True, crc_need=True) == self.adress:
+        return False
+
+    def exit_maintenance_mode(self, **kwargs):
+        # [0x0B]
+        if self._send_command([0x0B], True, crc_need=True) == self.address:
             return True
-        else:
-            return False
-        return None
+
+        return False
 
     def en_dis_rt_event_reporting(self, enable=False, **kwargs):
         # 0E
-        if enable == False:
+        if not enable:
             enable = [0]
         else:
             enable = [1]
+
         cmd = [0x0E]
         cmd.extend(bytearray(enable))
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return None
+
+        return False
 
     def send_meters_10_15(self, denom=True, **kwargs):
         cmd = [0x0F]
         data = self._send_command(cmd, crc_need=False, size=28)
-        if data != None:
+        if data:
             meters = {}
-            if denom == True:
+            if denom:
                 meters["total_cancelled_credits_meter"] = round(
                     int((binascii.hexlify(bytearray(data[1:5])))) * self.denom, 2
                 )
@@ -853,124 +830,132 @@ class Sas:
                 meters["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[21:25]))
                 )
+
             return meters
+
         return None
 
     def total_cancelled_credits(self, denom=True, **kwargs):
         # 10
         cmd = [0x10]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_bet_meter(self, denom=True, **kwargs):
         # 11
         cmd = [0x11]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_win_meter(self, denom=True, **kwargs):
         # 12
         cmd = [0x12]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_in_meter(self, denom=True, **kwargs):
         # 13
         cmd = [0x13]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_jackpot_meter(self, denom=True, **kwargs):
         # 14
         cmd = [0x14]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def games_played_meter(self, **kwargs):
         # 15
         cmd = [0x15]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def games_won_meter(self, denom=True, **kwargs):
         # 16
         cmd = [0x16]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def games_lost_meter(self, **kwargs):
         # 17
         cmd = [0x17]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def games_powerup_door_opened(self, **kwargs):
         # 18
         cmd = [0x18]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             meters = {}
             meters["games_last_power_up"] = int(binascii.hexlify(bytearray(data[1:3])))
-            meters["games_last_slot_door_close"] = int(
-                binascii.hexlify(bytearray(data[1:5]))
-            )
-
+            meters["games_last_slot_door_close"] = int(binascii.hexlify(bytearray(data[1:5])))
             return data
+
         return None
 
     def meters_11_15(self, denom=True, **kwargs):
         # 19
         cmd = [0x19]
         data = self._send_command(cmd, crc_need=False, size=24)
-        if data != None:
+        if data:
             meters = {}
-            if denom == False:
+            if not denom:
                 meters["total_bet_meter"] = int(binascii.hexlify(bytearray(data[1:5])))
                 meters["total_win_meter"] = int(binascii.hexlify(bytearray(data[5:9])))
                 meters["total_in_meter"] = int(binascii.hexlify(bytearray(data[9:13])))
@@ -997,26 +982,28 @@ class Sas:
                     binascii.hexlify(bytearray(data[17:21]))
                 )
             return meters
+
         return None
 
     def current_credits(self, denom=True, **kwargs):
         # 1A
         cmd = [0x1A]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
-            if denom == True:
+        if data:
+            if denom:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
             else:
                 return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def handpay_info(self, **kwargs):
         # 1B
         cmd = [0x1B]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
+        if data:
             meters = {}
             meters["bin_progressive_group"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
@@ -1025,15 +1012,16 @@ class Sas:
             meters["amount"] = int(binascii.hexlify(bytearray(data[3:8])))
             meters["bin_reset_ID"] = int(binascii.hexlify(bytearray(data[8:])))
             return meters
+
         return None
 
     def meters(self, denom=True, **kwargs):
         # 1C
         cmd = [0x1C]
         data = self._send_command(cmd, crc_need=False, size=36)
-        if data != None:
+        if data:
             meters = {}
-            if denom == False:
+            if not denom:
                 meters["total_bet_meter"] = int(binascii.hexlify(bytearray(data[1:5])))
                 meters["total_win_meter"] = int(binascii.hexlify(bytearray(data[5:9])))
                 meters["total_in_meter"] = int(binascii.hexlify(bytearray(data[9:13])))
@@ -1079,13 +1067,14 @@ class Sas:
                 )
 
             return meters
+
         return None
 
     def total_bill_meters(self, **kwargs):
         # 1E
         cmd = [0x1E]
         data = self._send_command(cmd, crc_need=False, size=28)
-        if data != None:
+        if data:
             meters = {}
             meters["s1_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[1:5]))
@@ -1107,6 +1096,7 @@ class Sas:
             )
 
             return meters
+
         return None
 
     def gaming_machine_ID(self):
@@ -1116,191 +1106,202 @@ class Sas:
 
     def total_dollar_value_of_bills_meter(self, **kwargs):
         # 20
-
         cmd = [0x20]
         data = self._send_command(cmd, crc_need=False, size=8)
 
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:])))
 
         return None
 
-    def ROM_signature_verification(self, **kwargs):
+    def rom_signature_verification(self, **kwargs):
         # 21
-
         cmd = [0x21, 0x00, 0x00]
         data = self._send_command(cmd, crc_need=True)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:3])))
+
         return None
 
     def eft_button_pressed(self, state=0, **kwargs):
         # 24
-        cmd = [0x24, 0x03]
-        cmd.append(state)
-
+        cmd = [0x24, 0x03, state]
         data = self._send_command(cmd, crc_need=True)
-        if data != None:
+        if data:
             return data
+
         return None
 
     def true_coin_in(self, denom=True, **kwargs):
         # 2A
         cmd = [0x2A]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
-            if denom == False:
+        if data:
+            if not denom:
                 return int(binascii.hexlify(bytearray(data[1:5])))
             else:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
+
         return None
 
     def true_coin_out(self, denom=True, **kwargs):
         # 2B
         cmd = [0x2B]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
-            if denom == False:
+        if data:
+            if not denom:
                 return int(binascii.hexlify(bytearray(data[1:5])))
             else:
                 return round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
+
         return None
 
     def curr_hopper_level(self, **kwargs):
         # 2C
         cmd = [0x2C]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_hand_paid_cancelled_credit(self, **kwargs):
         # 2D
         cmd = [0x2D]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def delay_game(self, delay_time=100, **kwargs):
         # 2E
-        tmp = []
         delay_time = str(delay_time)
-        delay = "" + ("0" * (4 - len(delay_time)) + delay_time)
+        delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
         cmd = [0x2E]
         count = 0
-        for i in range(len(delay) / 2):
-            cmd.append(int(delay[count : count + 2], 16))
+        for i in range(len(delay_fmt) / 2):
+            cmd.append(int(delay_fmt[count: count + 2], 16))
             count += 2
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
         else:
             return False
 
-        return None
-
-    def selected_meters_for_game(self, **kwargs):
+    @staticmethod
+    def selected_meters_for_game(**kwargs):
         # 2F
-        # FIXME: selected_meters_for_game
+        # TODO: selected_meters_for_game
         return None
 
     def send_1_bills_in_meters(self, **kwargs):
         # 31
         cmd = [0x31]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_2_bills_in_meters(self, **kwargs):
         # 32
         cmd = [0x32]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_5_bills_in_meters(self, **kwargs):
         # 33
         cmd = [0x33]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_10_bills_in_meters(self, **kwargs):
         # 34
         cmd = [0x34]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_20_bills_in_meters(self, **kwargs):
         # 35
         cmd = [0x35]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_50_bills_in_meters(self, **kwargs):
         # 36
         cmd = [0x36]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_100_bills_in_meters(self, **kwargs):
         # 37
         cmd = [0x37]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_500_bills_in_meters(self, **kwargs):
         # 38
         cmd = [0x38]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_1000_bills_in_meters(self, **kwargs):
         # 39
         cmd = [0x39]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_200_bills_in_meters(self, **kwargs):
         # 3A
         cmd = [0x3A]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_25_bills_in_meters(self, **kwargs):
         # 3B
         cmd = [0x3B]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_2000_bills_in_meters(self, **kwargs):
         # 3C
         cmd = [0x3C]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
         return None
 
@@ -1308,102 +1309,113 @@ class Sas:
         # 3D
         cmd = [0x3D]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
-            tito_statement = {}
-            tito_statement["cashout_ticket_number"] = int(
-                binascii.hexlify(bytearray(data[1:3]))
-            )
-            tito_statement["cashout_amount_in_cents"] = int(
-                binascii.hexlify(bytearray(data[3:]))
-            )
-            return tito_statement
+        if data:
+            return {
+                "cashout_ticket_number": int(
+                    binascii.hexlify(bytearray(data[1:3]))
+                ),
+                "cashout_amount_in_cents": int(
+                    binascii.hexlify(bytearray(data[3:]))
+                )
+            }
+
         return None
 
     def send_2500_bills_in_meters(self, **kwargs):
         # 3E
         cmd = [0x3E]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_5000_bills_in_meters(self, **kwargs):
         # 3F
         cmd = [0x3F]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_10000_bills_in_meters(self, **kwargs):
         # 40
         cmd = [0x40]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_20000_bills_in_meters(self, **kwargs):
         # 41
         cmd = [0x41]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_25000_bills_in_meters(self, **kwargs):
         # 42
         cmd = [0x42]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_50000_bills_in_meters(self, **kwargs):
         # 43
         cmd = [0x43]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_100000_bills_in_meters(self, **kwargs):
         # 44
         cmd = [0x44]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def send_250_bills_in_meters(self, **kwargs):
         # 45
         cmd = [0x45]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def credit_amount_of_all_bills_accepted(self, **kwargs):
         # 46
         cmd = [0x46]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def coin_amount_accepted_from_external_coin_acceptor(self, **kwargs):
         # 47
         cmd = [0x47]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def last_accepted_bill_info(self, **kwargs):
         # 48
         cmd = [0x48]
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
+        if data:
             meters = {}
             meters["country_code"] = int(binascii.hexlify(bytearray(data[1:2])))
             meters["bill_denomination"] = int(binascii.hexlify(bytearray(data[2:3])))
@@ -1411,22 +1423,25 @@ class Sas:
                 binascii.hexlify(bytearray(data[3:6]))
             )
             return meters
+
         return None
 
     def number_of_bills_currently_in_stacker(self, **kwargs):
         # 49
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def total_credit_amount_of_all_bills_in_stacker(self, **kwargs):
         # 4A
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
-        if data != None:
+        if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
+
         return None
 
     def set_secure_enhanced_validation_ID(
@@ -1434,33 +1449,23 @@ class Sas:
     ):
         # 4C
         # FIXME: set_secure_enhanced_validation_ID
-        cmd = [0x4C]
-
-        cmd.extend(MachineID)
-        cmd.extend(seq_num)
-        cmd = bytearray(cmd)
-        # print str(binascii.hexlify((cmd)))
+        cmd = [0x4C, MachineID, seq_num]
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             tito_statement["machine_ID"] = int(binascii.hexlify(bytearray(data[1:4])))
             tito_statement["sequence_number"] = int(
                 binascii.hexlify(bytearray(data[4:8]))
             )
-
             return data
+
         return None
 
     def enhanced_validation_information(self, curr_validation_info=0, **kwargs):
         # 4D
         # FIXME: enhanced_validation_information
-        cmd = [0x4D]
-
-        # cmd.append(transfer_code)
-        # cmd=cmd.extend(0)
-        # rint str(binascii.hexlify(bytearray(cmd)))
-        cmd.append((curr_validation_info))
+        cmd = [0x4D, curr_validation_info]
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             tito_statement["validation_type"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
@@ -1489,16 +1494,15 @@ class Sas:
             tito_statement["pool_id"] = int(binascii.hexlify(bytearray(data[30:32])))
 
             return data
+
         return None
 
     def current_hopper_status(self, **kwargs):
         # 4F
         # FIXME: current_hopper_status
-
         cmd = [0x4F]
-
         data = self._send_command(cmd, True, crc_need=False)
-        if data != None:
+        if data:
             meters["current_hopper_lenght"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
@@ -1510,42 +1514,44 @@ class Sas:
             )
             meters["current_hopper_level"] = int(binascii.hexlify(bytearray(data[4:])))
             return data
+
         return None
 
     def validation_meters(self, type_of_validation=0x00, **kwargs):
         # 50
         # FIXME: validation_meters
-        cmd = [0x50]
-        cmd.append(type_of_validation)
+        cmd = [0x50, type_of_validation]
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             meters["bin_validation_type"] = int(binascii.hexlify(bytearray(data[1])))
             meters["total_validations"] = int(binascii.hexlify(bytearray(data[2:6])))
             meters["cumulative_amount"] = str(binascii.hexlify(bytearray(data[6:])))
-
             return data
+
         return None
 
-    def total_number_of_games_impimented(self, **kwargs):
+    def total_number_of_games_implimented(self, **kwargs):
         # 51
         cmd = [0x51]
-        # cmd.extend(type_of_validation)
+        # FIXME: cmd.extend(type_of_validation)
         data = self._send_command(cmd, crc_need=False, size=6)
-        if data != None:
+        if data:
             return str(binascii.hexlify(bytearray(data[1:])))
+
         return None
 
     def game_meters(self, n=None, denom=True, **kwargs):
         # 52
         cmd = [0x52]
-        if n == None:
-            n == self.selected_game_number(in_hex=False)
+
+        if not n:
+            n = self.selected_game_number(in_hex=False)
         cmd.extend([((n >> 8) & 0xFF), (n & 0xFF)])
 
         data = self._send_command(cmd, crc_need=True, size=22)
-        if data != None:
+        if data:
             meters = {}
-            if denom == False:
+            if not denom:
                 meters["game_n_number"] = str(binascii.hexlify(bytearray(data[1:3])))
                 meters["game_n_coin_in_meter"] = int(
                     binascii.hexlify(bytearray(data[3:7]))
@@ -1573,19 +1579,22 @@ class Sas:
                 meters["geme_n_games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[15:]))
                 )
+
             return meters
+
         return None
 
     def game_configuration(self, n=None, **kwargs):
         # 53
-        # FIXME: game_configuration
-        if n == None:
-            n = self.selected_game_number(in_hex=False)
         cmd = [0x53]
+        # FIXME: game_configuration
+
+        if not n:
+            n = self.selected_game_number(in_hex=False)
         cmd.extend([(n & 0xFF), ((n >> 8) & 0xFF)])
 
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             meters["game_n_number_config"] = int(binascii.hexlify(bytearray(data[1:3])))
             meters["game_n_ASCII_game_ID"] = str(binascii.hexlify(bytearray(data[3:5])))
             meters["game_n_ASCII_additional_id"] = str(
@@ -1606,162 +1615,143 @@ class Sas:
             meters["game_n_ASCII_base_percentage"] = str(
                 binascii.hexlify(bytearray(data[17:]))
             )
-
             return data
+
         return None
 
     def SAS_version_gaming_machine_serial_ID(self, **kwargs):
         # 54
         cmd = [0x54, 0x00]
-
         data = self._send_command(cmd, crc_need=False, size=20)
-        if data != None:
+        if data:
             meters = {}
             meters["ASCII_SAS_version"] = (
                 int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
             )
             meters["ASCII_serial_number"] = str(bytearray(data[5:]))
             return meters
+
         return None
 
     def selected_game_number(self, in_hex=True, **kwargs):
         # 55
         cmd = [0x55]
-
         data = self._send_command(cmd, crc_need=False, size=6)
-        if data != None:
-            if in_hex == False:
+        if data:
+            if not in_hex:
                 return int(binascii.hexlify(bytearray(data[1:])))
             else:
                 return binascii.hexlify(bytearray(data[1:]))
+
         return None
 
     def enabled_game_numbers(self, **kwargs):
         # 56
-
         cmd = [0x56]
-
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
+        if data:
             meters = {}
             meters["number_of_enabled_games"] = int(
                 binascii.hexlify(bytearray(data[2]))
             )
             meters["enabled_games_numbers"] = int(binascii.hexlify(bytearray(data[3:])))
-
             return meters
+
         return None
 
     def pending_cashout_info(self, **kwargs):
         # 57
-
         cmd = [0x57]
-
         data = self._send_command(cmd, crc_need=False)
-        if data != None:
+        if data:
             tito_statement = {}
             tito_statement["cashout_type"] = int(binascii.hexlify(bytearray(data[1:2])))
             tito_statement["cashout_amount"] = str(
                 binascii.hexlify(bytearray(data[2:]))
             )
-
             return tito_statement
+
         return None
 
-    def validation_number(self, validationID=1, valid_number=0, **kwargs):
+    def validation_number(self, validation_id=1, valid_number=0, **kwargs):
         # 58
-
-        cmd = [0x58]
-        cmd.append(validationID)
-        cmd.extend(self.bcd_coder_array(valid_number, 8))
-        # print cmd
+        cmd = [0x58, validation_id, self.bcd_coder_array(valid_number, 8)]
         data = self._send_command(cmd, crc_need=True)
-        if data != None:
+        if data:
             return str(binascii.hexlify(bytearray(data[1])))
+
         return None
 
     def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
         # 63
         # FIXME: eft_send_promo_to_machine
-        cmd = [
-            0x63,
-            count,
-        ]
+        cmd = [0x63, count, status, self.bcd_coder_array(amount, 4)]
         # status 0-init 1-end
-        cmd.append(status)
-        cmd.extend(self.bcd_coder_array(amount, 4))
         data = self._send_command(cmd, crc_need=True)
-        if data != None:
+        if data:
             eft_statement = {}
             eft_statement["eft_status"] = str(binascii.hexlify(bytearray(data[1:])))
             eft_statement["promo_amount"] = str(binascii.hexlify(bytearray(data[4:])))
             # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-
             return eft_statement
+
         return None
 
     def eft_load_cashable_credits(self, amount=0, count=1, status=0, **kwargs):
         # 69
         # FIXME: eft_load_cashable_credits
-        cmd = [
-            0x69,
-            count,
-        ]
-        cmd.append(status)
-        cmd.extend(self.bcd_coder_array(amount, 4))
+        cmd = [0x69, count, status, self.bcd_coder_array(amount, 4)]
         data = self._send_command(cmd, True, crc_need=True)
-
-        if data != None:
+        if data:
             meters["eft_status"] = str(binascii.hexlify(bytearray(data[1:2])))
             meters["cashable_amount"] = str(binascii.hexlify(bytearray(data[2:5])))
-
             return data[3]
+
         return None
 
-    def eft_avilable_transfers(self, **kwargs):
+    def eft_available_transfers(self, **kwargs):
         # 6A
         # FIXME: eft_load_cashable_credits
         cmd = [0x6A]
         data = self._send_command(cmd, True, crc_need=False)
-        if data != None:
+        if data:
             # meters['number_bills_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
             return data
+
         return None
 
-    def autentification_info(
+    def authentication_info(
         self,
         action=0,
-        adressing_mode=0,
+        addressing_mode=0,
         component_name="",
         auth_method=b"\x00\x00\x00\x00",
-        seed_lenght=0,
         seed="",
-        offset_lenght=0,
+        seed_length=0,
         offset="",
+        offset_length=0,
         **kwargs
     ):
         # 6E
         # FIXME: autentification_info
-        cmd = [0x6E, 0x00]
-        cmd.append(action)
+        cmd = [0x6E, 0x00, action]
         if action == 0:
-            # cmd.append(action)
             cmd[1] = 1
         else:
             if action == 1 or action == 3:
-                cmd.append(adressing_mode)
+                cmd.append(addressing_mode)
                 cmd.append(len(bytearray(component_name)))
                 cmd.append(bytearray(component_name))
                 cmd[1] = len(bytearray(component_name)) + 3
             else:
                 if action == 2:
-                    cmd.append(adressing_mode)
+                    cmd.append(addressing_mode)
                     cmd.append(len(bytearray(component_name)))
                     cmd.append(bytearray(component_name))
                     cmd.append(auth_method)
-                    cmd.append(seed_lenght)
+                    cmd.append(seed_length)
                     cmd.append(bytearray(seed))
-                    cmd.append(offset_lenght)
+                    cmd.append(offset_length)
                     cmd.append(bytearray(offset))
 
                     cmd[1] = (
@@ -1772,11 +1762,13 @@ class Sas:
                     )
 
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             return data[1]
+
         return None
 
-    def extended_meters_for_game(self, n=1, **kwargs):
+    @staticmethod
+    def extended_meters_for_game(n=1, **kwargs):
         # TODO: extended_meters_for_game
         # 6F
         return None
@@ -1785,15 +1777,14 @@ class Sas:
         # 70
         # FIXME: ticket_validation_data
         cmd = [0x70]
-
         data = self._send_command(cmd, True, crc_need=False)
-        if data != None:
+        if data:
             meters["ticket_status"] = int(binascii.hexlify(bytearray(data[2:3])))
             meters["ticket_amount"] = str(binascii.hexlify(bytearray(data[3:8])))
             meters["parsing_code"] = int(binascii.hexlify(bytearray(data[8:9])))
             meters["validation_data"] = str(binascii.hexlify(bytearray(data[9:])))
-
             return data[1]
+
         return None
 
     def redeem_ticket(
@@ -1802,108 +1793,97 @@ class Sas:
         transfer_amount=0,
         parsing_code=0,
         validation_data=0,
-        rescticted_expiration=0,
-        pool_ID=0,
+        restricted_expiration=0,
+        pool_id=0,
         **kwargs
     ):
         # 71
         # FIXME: redeem_ticket
-        cmd = [0x71, 0x00]
-        cmd.append(transfer_code)
-        cmd.extend(self.bcd_coder_array(transfer_amount, 5))
-        cmd.append(parsing_code)
-
-        cmd.extend(self.bcd_coder_array(validation_data, 8))
-        cmd.extend(self.bcd_coder_array(rescticted_expiration, 4))
-        cmd.extend(self.bcd_coder_array(pool_ID, 2))
-        cmd[1] = 8 + 13
-
+        cmd = [0x71, 0x21, transfer_code, self.bcd_coder_array(transfer_amount, 5),
+               parsing_code, self.bcd_coder_array(validation_data, 8),
+               self.bcd_coder_array(restricted_expiration, 4), self.bcd_coder_array(pool_id, 2)]
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             meters["ticket_status"] = int(binascii.hexlify(bytearray(data[2:3])))
             meters["ticket_amount"] = int(binascii.hexlify(bytearray(data[3:8])))
             meters["parsing_code"] = int(binascii.hexlify(bytearray(data[8:9])))
             meters["validation_data"] = str(binascii.hexlify(bytearray(data[9:])))
-
             return data[1]
+
         return None
 
-    def AFT_jp(self, mony, amount=1, lock_timeout=0, games=None, **kwargs):
+    def aft_jp(self, money, amount=1, lock_timeout=0, games=None, **kwargs):
+        # FIXME: make logically coherent
         # self.lock_emg(lock_time=500, condition=1)
+        money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
             return None
-        if games == None:
+
+        if not games:
             for i in range(3):
-                try:
-                    game_selected = self.selected_game_number(in_hex=False)
-                except:
-                    game_selected = None
-                if game_selected == None:
+                games = self.selected_game_number(in_hex=False)
+                if not games:
                     time.sleep(0.04)
                 else:
                     break
-        else:
-            game_selected = games
-        if game_selected == 0:
-            return "NoGame"
-        elif game_selected == None:
-            return "NoGame"
-        elif game_selected < 1:
-            return "NoGame"
-        my_time = datetime.datetime.now()
-        my_time = datetime.datetime.strftime(my_time, "%m%d%Y")
-        if mony == None:
-            mony = str(self.current_credits(denom=False))
-        else:
-            mony = str(int((mony / self.denom)))
-            mony = mony.replace(".", "")
-        mony = "0" * (10 - len(mony)) + mony
-        if amount == 1:
-            mony_1 = mony
-            mony_2 = "0000000000"
-            mony_3 = "0000000000"
-        elif amount == 2:
-            mony_1 = "0000000000"
-            mony_2 = mony
-            mony_3 = "0000000000"
-        elif amount == 3:
-            mony_1 = "0000000000"
-            mony_2 = "0000000000"
-            mony_3 = mony
-        else:
-            raise AFTBadAmount
 
-        last_transaction = self.AFT_format_transaction()
+        if not games or games == 0 or games < 1:
+            return "NoGame"
+
+        if not money:
+            money = str(self.current_credits(denom=False))
+        else:
+            money = str(int((money / self.denom)))
+            money = money.replace(".", "")
+
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
         len_transaction_id = hex(len(last_transaction) / 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
             len_transaction_id = "0" + len_transaction_id
-        cmd = "72{my_key}{index}00{transfer_code}{mony_1}{mony_2}{mony_3}00{asett}{key}{len_transaction}{transaction}{times}0C0000".format(
+
+        cmd = """72{my_key}{index}00{transfer_code}{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
             transfer_code="11",
             index="00",
-            mony_1=mony_1,
-            mony_2=mony_2,
-            mony_3=mony_3,
-            asett=self.asset_number,
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
             key=self.reg_key,
             len_transaction=len_transaction_id,
             transaction=last_transaction,
-            times=my_time,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
             my_key=self.my_key,
         )
+
         new_cmd = []
         count = 0
         for i in range(len(cmd) / 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
-        self.AFT_register()
+        self.aft_register()
         if lock_timeout > 0:
-            self.AFT_game_lock(lock_timeout, condition=1)
+            self.aft_game_lock(lock_timeout, condition=1)
+
         data = self._send_command(new_cmd, crc_need=True, size=82)
-        if data != None:
+
+        if data:
             a = int(binascii.hexlify(bytearray(data[26:27])), 16)
             response = {
                 "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -1931,70 +1911,70 @@ class Sas:
                 "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
             }
         try:
-            self.AFT_unregister()
+            self.aft_unregister()
         except:
             self.log.warning("AFT UNREGISTER ERROR: won to host")
+
         return response
 
-    def AFT_out(self, mony=None, amount=1, lock_timeout=0, **kwargs):
+    def aft_out(self, money=None, amount=1, lock_timeout=0, **kwargs):
         # self.lock_emg(lock_time=500, condition=1)
+        money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
             return None
-        my_time = datetime.datetime.now()
-        my_time = datetime.datetime.strftime(my_time, "%m%d%Y")
-        if mony == None:
-            mony = str(self.current_credits(denom=False))
-        else:
-            mony = str(int((mony / self.denom)))
-            mony = mony.replace(".", "")
-        mony = "0" * (10 - len(mony)) + mony
-        if amount == 1:
-            mony_1 = mony
-            mony_2 = "0000000000"
-            mony_3 = "0000000000"
-        elif amount == 2:
-            mony_1 = "0000000000"
-            mony_2 = mony
-            mony_3 = "0000000000"
-        elif amount == 3:
-            mony_1 = "0000000000"
-            mony_2 = "0000000000"
-            mony_3 = mony
-        else:
-            raise AFTBadAmount
 
-        last_transaction = self.AFT_format_transaction()
+        if not money:
+            money = str(self.current_credits(denom=False))
+        else:
+            money = str(int((money / self.denom))).replace(".", "")
+
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
         len_transaction_id = hex(len(last_transaction) / 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
             len_transaction_id = "0" + len_transaction_id
-        cmd = "72{my_key}{index}00{transfer_code}{mony_1}{mony_2}{mony_3}00{asett}{key}{len_transaction}{transaction}{times}0C0000".format(
+
+        cmd = """72{my_key}{index}00{transfer_code}{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
             transfer_code="80",
             index="00",
-            mony_1=mony_1,
-            mony_2=mony_2,
-            mony_3=mony_3,
-            asett=self.asset_number,
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
             key=self.reg_key,
             len_transaction=len_transaction_id,
             transaction=last_transaction,
-            times=my_time,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
             my_key=self.my_key,
         )
+
         new_cmd = []
         count = 0
         for i in range(len(cmd) / 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
-        self.AFT_register()
+        self.aft_register()
         if lock_timeout > 0:
-            self.AFT_game_lock(lock_timeout, condition=1)
+            self.aft_game_lock(lock_timeout, condition=1)
         try:
             data = self._send_command(new_cmd, crc_need=True, size=82)
-            if data != None:
+            if data:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2021,35 +2001,27 @@ class Sas:
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
-        # try:
-        self.AFT_unregister()
-        # except:
-        #     self.log.warning('AFT UNREGISTER ERROR: out')
+
+        self.aft_unregister()
+
         return response
 
-    def AFT_cashout_enable(self, amount=1, **kwargs):
-        my_time = datetime.datetime.now()
-        my_time = datetime.datetime.strftime(my_time, "%m%d%Y")
-        mony = "0000000000"
+    def aft_cashout_enable(self, amount=1, money="0000000000", **kwargs):
+        money_1 = money_2 = money_3 = "0000000000"
 
-        if amount == 1:
-            mony_1 = mony
-            mony_2 = "0000000000"
-            mony_3 = "0000000000"
-        elif amount == 2:
-            mony_1 = "0000000000"
-            mony_2 = mony
-            mony_3 = "0000000000"
-        elif amount == 3:
-            mony_1 = "0000000000"
-            mony_2 = "0000000000"
-            mony_3 = mony
-        else:
-            raise AFTBadAmount
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
 
         last_transaction = self.AFT_format_transaction()
         len_transaction_id = hex(len(last_transaction) / 2)[2:]
@@ -2058,30 +2030,33 @@ class Sas:
         elif len(len_transaction_id) % 2 == 1:
             len_transaction_id = "0" + len_transaction_id
 
-        cmd = "72{my_key}00{index}{transfer_code}{mony_1}{mony_2}{mony_3}02{asett}{key}{len_transaction}{transaction}{times}0C0000".format(
+        cmd = """72{my_key}00{index}{transfer_code}{money_1}{money_2}{money_3}
+                 02{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
             transfer_code="80",
             index="00",
-            mony_1=mony_1,
-            mony_2=mony_2,
-            mony_3=mony_3,
-            asett=self.asset_number,
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
             key=self.reg_key,
             len_transaction=len_transaction_id,
             transaction=last_transaction,
-            times=my_time,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
             my_key=self.my_key,
         )
+
         new_cmd = []
         count = 0
         for i in range(len(cmd) / 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
-        self.AFT_register()
+
+        self.aft_register()
 
         response = None
         try:
             data = self._send_command(new_cmd, crc_need=True, size=82)
-            if data != None:
+            if data:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2112,99 +2087,80 @@ class Sas:
                 }
         except Exception as e:
             self.log.info(e, exc_info=True)
-        # try:
-        self.AFT_unregister()
-        # except:
-        # try:
-        #     time.sleep(0.04)
-        #     self.AFT_clean_transaction_poll()
-        # except Exception as e:
-        #     pass
+
+        self.aft_unregister()
         try:
-            self.AFT_clean_transaction_poll()
+            self.aft_clean_transaction_poll()
         except:
-            pass
+            return False
+
         return True
 
-    def AFT_won(self, mony, amount=1, games=None, lock_timeout=0, **kwargs):
+    def aft_won(self, money="0000000000", amount=1, games=None, lock_timeout=0, **kwargs):
+        money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
             return None
-        if games == None:
+
+        if not games:
             for i in range(3):
                 try:
-                    game_selected = self.selected_game_number(in_hex=False)
+                    games = self.selected_game_number(in_hex=False)
                 except:
-                    game_selected = None
-                if game_selected == None:
                     time.sleep(0.04)
                 else:
                     break
-        else:
-            game_selected = games
-        if game_selected == 0:
-            return "NoGame"
-        elif game_selected == None:
-            return "NoGame"
-        elif game_selected < 1:
-            return "NoGame"
-        elif game_selected < None:
+
+        if not games or games < 1:
             return "NoGame"
 
-        my_time = datetime.datetime.now()
-        my_time = datetime.datetime.strftime(my_time, "%m%d%Y")
-        mony = str(int((mony / self.denom)))
-        mony = mony.replace(".", "")
-        mony = "0" * (10 - len(mony)) + mony
-        if amount == 1:
-            mony_1 = mony
-            mony_2 = "0000000000"
-            mony_3 = "0000000000"
-        elif amount == 2:
-            mony_1 = "0000000000"
-            mony_2 = mony
-            mony_3 = "0000000000"
-        elif amount == 3:
-            mony_1 = "0000000000"
-            mony_2 = "0000000000"
-            mony_3 = mony
-        else:
-            raise AFTBadAmount
-        # if lock == True:
-        #   self.lock_emg(lock_time=500, condition=0)
-        # self.lock_emg()
+        money = str(int(money / self.denom)).replace(".", "")
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
         last_transaction = self.AFT_format_transaction()
         len_transaction_id = hex(len(last_transaction) / 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
             len_transaction_id = "0" + len_transaction_id
-        cmd = "72{my_key}{transfer_code}{index}{mony_1}{mony_2}{mony_3}00{asett}{key}{len_transaction}{transaction}{times}0C0000".format(
+
+        cmd = """72{my_key}{transfer_code}{index}{money_1}{money_2}{money_3}"
+               "00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
             transfer_code="0000",
             index="10",
-            mony_1=mony_1,
-            mony_2=mony_2,
-            mony_3=mony_3,
-            asett=self.asset_number,
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
             key=self.reg_key,
             len_transaction=len_transaction_id,
             transaction=last_transaction,
-            times=my_time,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
             my_key=self.my_key,
         )
 
         new_cmd = []
         count = 0
         for i in range(len(cmd) / 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
-        self.AFT_register()
+        self.aft_register()
         if lock_timeout > 0:
-            self.AFT_game_lock(lock_timeout, condition=3)
+            self.aft_game_lock(lock_timeout, condition=3)
         try:
             data = self._send_command(new_cmd, crc_need=True, size=82)
-            if data != None:
+            if data:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2235,33 +2191,28 @@ class Sas:
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
-        self.AFT_unregister()
-        # except:
-        #     self.log.warning('AFT UNREGISTER ERROR: won')
+
+        self.aft_unregister()
+
         return response
 
-    def AFT_in(self, mony, amount=1, lock_timeout=0, **kwargs):
+    def aft_in(self, money, amount=1, lock_timeout=0, **kwargs):
+        money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
             return None
-        my_time = datetime.datetime.now()
-        my_time = datetime.datetime.strftime(my_time, "%m%d%Y")
-        mony = str(int((mony / self.denom)))
-        mony = mony.replace(".", "")
-        mony = "0" * (10 - len(mony)) + mony
-        if amount == 1:
-            mony_1 = mony
-            mony_2 = "0000000000"
-            mony_3 = "0000000000"
-        elif amount == 2:
-            mony_1 = "0000000000"
-            mony_2 = mony
-            mony_3 = "0000000000"
-        elif amount == 3:
-            mony_1 = "0000000000"
-            mony_2 = "0000000000"
-            mony_3 = mony
-        else:
-            raise AFTBadAmount
+
+        money = str(int(money / self.denom)).replace(".", "")
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
 
         last_transaction = self.AFT_format_transaction()
         len_transaction_id = hex(len(last_transaction) / 2)[2:]
@@ -2269,34 +2220,31 @@ class Sas:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
             len_transaction_id = "0" + len_transaction_id
-        cmd = "72{my_key}{transfer_code}{index}00{mony_1}{mony_2}{mony_3}00{asett}{key}{len_transaction}{transaction}{times}0C0000".format(
+
+        cmd = """72{my_key}{transfer_code}{index}00{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
             transfer_code="00",
             index="00",
-            mony_1=mony_1,
-            mony_2=mony_2,
-            mony_3=mony_3,
-            asett=self.asset_number,
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
             key=self.reg_key,
             len_transaction=len_transaction_id,
             transaction=last_transaction,
-            times=my_time,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
             my_key=self.my_key,
         )
+
         new_cmd = []
         count = 0
         for i in range(len(cmd) / 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
-        # self.AFT_register()
-        # if lock_timeout > 0:
-        #    self.AFT_game_lock(lock_timeout, condition=0)
-        response = None
-        self.AFT_register()
-        if lock_timeout > 0:
-            self.AFT_game_lock(lock_timeout, condition=0)
+
         try:
             data = self._send_command(new_cmd, crc_need=True, size=82)
-            if data != None:
+            if data:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2325,34 +2273,32 @@ class Sas:
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
                     "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
                 }
-        except Exception as e:
-            self.log.error(e, exc_info=True)
-        # try:
-        self.AFT_unregister()
-        # except:
-        # self.log.warning('AFT UNREGISTER ERROR: in')
-        return response
 
-    def AFT_clean_transaction_poll(self, register=False, **kwargs):
-        # try:
-        if register == True:
-            self.AFT_register()
-        # except Exception as e:
-        #     self.log.error(e, exc_info = True)
-        if self.transaction == None:
-            self.AFT_get_last_transaction()
-        # time.sleep(0.7)
+                self.aft_unregister()
+                return response
+
+        except Exception as e:
+            self.aft_unregister()
+            self.log.error(e, exc_info=True)
+
+    def aft_clean_transaction_poll(self, register=False, **kwargs):
+        if register:
+            self.aft_register()
+
+        if not self.transaction:
+            self.aft_get_last_transaction()
+
         cmd = "7202FF00"
         count = 0
         new_cmd = []
         for i in range(len(cmd) / 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
+
         response = None
         try:
             data = self._send_command(new_cmd, crc_need=True, size=90)
-            if data != None:
-                # print binascii.hexlify(data)
+            if data:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2378,15 +2324,17 @@ class Sas:
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
                     "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
                 }
-            if register == True:
+
+            if register:
                 try:
-                    self.AFT_unregister()
+                    self.aft_unregister()
                 except:
-                    self.log.warning("AFT UNREGISTER ERROR: cleean poll")
+                    self.log.warning("AFT UNREGISTER ERROR: clean poll")
+
             if hex(self.transaction)[2:-1] == response["Transaction ID"]:
                 return response
             else:
-                if self.aft_get_last_transaction == True:
+                if self.aft_get_last_transaction:
                     raise BadTransactionID(
                         "last: %s, new:%s "
                         % (hex(self.transaction)[2:-1], response["Transaction ID"])
@@ -2398,9 +2346,10 @@ class Sas:
                     )
         except BadCRC:
             pass
+
         return False
 
-    def AFT_transfer_funds(
+    def aft_transfer_funds(
         self,
         transfer_code=0x00,
         transaction_index=0x00,
@@ -2411,38 +2360,23 @@ class Sas:
         transfer_flags=0x00,
         asset_number=b"\x00\x00\x00\x00\x00",
         registration_key=0,
-        transaction_ID_lenght=0x00,
-        transaction_ID="",
+        transaction_id="",
         expiration=0,
-        pool_ID=0,
-        reciept_data="",
+        pool_id=0,
+        receipt_data="",
         lock_timeout=0,
         **kwargs
     ):
         # 72
-        cmd = [0x72, 0x00]
-        cmd.append(transfer_code)
-        cmd.append(transaction_index)
-        cmd.append(transfer_type)
-        cmd.extend(self.bcd_coder_array(cashable_amount, 5))
-        cmd.extend(self.bcd_coder_array(restricted_amount, 5))
-        cmd.extend(self.bcd_coder_array(non_restricted_amount, 5))
-        cmd.append(transfer_flags)
-        cmd.extend((asset_number))
-        cmd.extend(self.bcd_coder_array(registration_key, 20))
-        cmd.append(len(transaction_ID))
-        cmd.extend(transaction_ID)
-        cmd.extend(self.bcd_coder_array(expiration, 4))
-        cmd.extend(self.bcd_coder_array(pool_ID, 2))
-
-        cmd.append(len(reciept_data))
-        cmd.extend(reciept_data)
-        cmd.extend(self.bcd_coder_array(lock_timeout, 2))
-
-        cmd[1] = len(transaction_ID) + len(transaction_ID) + 53
+        cmd = [0x72, 2 * len(transaction_id) + 53, transfer_code, transaction_index, transfer_type,
+               self.bcd_coder_array(cashable_amount, 5), self.bcd_coder_array(restricted_amount, 5),
+               self.bcd_coder_array(non_restricted_amount, 5), transfer_flags, asset_number,
+               self.bcd_coder_array(registration_key, 20), len(transaction_id),
+               self.bcd_coder_array(expiration, 4), self.bcd_coder_array(pool_id, 2), len(receipt_data),
+               receipt_data, self.bcd_coder_array(lock_timeout, 2)]
 
         data = self._send_command(cmd, crc_need=True)
-        if data != None:
+        if data:
             aft_statement["transaction_buffer_position"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
@@ -2466,174 +2400,172 @@ class Sas:
                 binascii.hexlify(bytearray(data[21:22]))
             )
             aft_statement["asset_number"] = binascii.hexlify(bytearray(data[22:26]))
-            aft_statement["transaction_ID_lenght"] = int(
+            aft_statement["transaction_id_length"] = int(
                 binascii.hexlify(bytearray(data[26:27]))
             )
             a = int(binascii.hexlify(bytearray(data[26:27])))
-            aft_statement["transaction_ID"] = str(
-                binascii.hexlify(bytearray(data[27 : (27 + a + 1)]))
+            aft_statement["transaction_id"] = str(
+                binascii.hexlify(bytearray(data[27: (27 + a + 1)]))
             )
             a = 27 + a + 1
             aft_statement["transaction_date"] = str(
-                binascii.hexlify(bytearray(data[a : a + 5]))
+                binascii.hexlify(bytearray(data[a: a + 5]))
             )
             a = a + 5
             aft_statement["transaction_time"] = str(
-                binascii.hexlify(bytearray(data[a : a + 4]))
+                binascii.hexlify(bytearray(data[a: a + 4]))
             )
             aft_statement["expiration"] = str(
-                binascii.hexlify(bytearray(data[a + 4 : a + 9]))
+                binascii.hexlify(bytearray(data[a + 4: a + 9]))
             )
-            aft_statement["pool_ID"] = str(
-                binascii.hexlify(bytearray(data[a + 9 : a + 11]))
+            aft_statement["pool_id"] = str(
+                binascii.hexlify(bytearray(data[a + 9: a + 11]))
             )
-            aft_statement["cumulative_casable_amount_meter_size"] = binascii.hexlify(
-                bytearray(data[a + 11 : a + 12])
+            aft_statement["cumulative_cashable_amount_meter_size"] = binascii.hexlify(
+                bytearray(data[a + 11: a + 12])
             )
-            b = a + int(binascii.hexlify(bytearray(data[a + 11 : a + 12])))
-            aft_statement["cumulative_casable_amount_meter"] = binascii.hexlify(
-                bytearray(data[a + 12 : b + 1])
+            b = a + int(binascii.hexlify(bytearray(data[a + 11: a + 12])))
+            aft_statement["cumulative_cashable_amount_meter"] = binascii.hexlify(
+                bytearray(data[a + 12: b + 1])
             )
             aft_statement["cumulative_restricted_amount_meter_size"] = binascii.hexlify(
-                bytearray(data[b + 1 : b + 2])
+                bytearray(data[b + 1: b + 2])
             )
-            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1 : b + 2])))
+            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1: b + 2])))
             aft_statement["cumulative_restricted_amount_meter"] = binascii.hexlify(
-                bytearray(data[b + 2 : c])
+                bytearray(data[b + 2: c])
             )
             aft_statement[
                 "cumulative_nonrestricted_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[c : c + 1]))
-            b = int(binascii.hexlify(bytearray(data[c : c + 1]))) + c
+            ] = binascii.hexlify(bytearray(data[c: c + 1]))
+            b = int(binascii.hexlify(bytearray(data[c: c + 1]))) + c
             aft_statement["cumulative_nonrestricted_amount_meter"] = binascii.hexlify(
-                bytearray(data[c + 1 :])
+                bytearray(data[c + 1:])
             )
 
             return data[1]
+
         return None
 
-    def AFT_get_last_transaction(self, **kwargs):
+    def aft_get_last_transaction(self, **kwargs):
         cmd = [0x72, 0x02, 0xFF, 0x00]
         # time.sleep(SLEEP_IF_FORMAT_TRANSACTION)
         data = self._send_command(cmd, crc_need=True, size=90)
-        if data != None:
+        if data:
             try:
-                if self.aft_get_last_transaction == False:
+                if not self.aft_get_last_transaction:
                     raise ValueError
+
                 count = int(binascii.hexlify(data[26:27]), 16)
-                transaction = binascii.hexlify(data[27 : 27 + count])
+                transaction = binascii.hexlify(data[27: 27 + count])
                 if transaction == "2121212121212121212121212121212121":
                     transaction = "2020202020202020202020202020202021"
                 self.transaction = int(transaction, 16)
+
                 return self.transaction
+
             except ValueError as e:
                 self.log.warning(e, exc_info=True)
                 self.transaction = int("2020202020202020202020202020202021", 16)
                 self.log.warning("AFT no transaction")
+
             except Exception as e:
                 self.log.error(e, exc_info=True)
                 self.transaction = int("2020202020202020202020202020202021", 16)
                 self.log.warning("AFT no transaction")
+
         else:
             self.transaction = int("2020202020202020202020202020202021", 16)
             self.log.warning("AFT no transaction")
+
         return self.transaction
 
-    def AFT_format_transaction(self, get_from_emg=False, **kwargs):
-        if get_from_emg == True:
-            self.AFT_get_last_transaction()
+    def aft_format_transaction(self, from_egm=False, **kwargs):
+        if from_egm:
+            self.aft_get_last_transaction()
+
         self.transaction += 1
         transaction = hex(self.transaction)[2:-1]
         count = 0
         tmp = []
         for i in range(len(transaction) / 2):
-            tmp.append(transaction[count : count + 2])
+            tmp.append(transaction[count: count + 2])
             count += 2
+
         tmp.reverse()
         for i in range(len(tmp)):
             if int(tmp[i], 16) >= 124:
                 tmp[i] = "20"
                 tmp[i + 1] = hex(int(tmp[i + 1], 16) + 1)[2:]
+
         tmp.reverse()
         response = ""
         for i in tmp:
             response += i
         if response == "2121212121212121212121212121212121":
             response = "2020202020202020202020202020202021"
+
         self.transaction = int(response, 16)
         return response
 
-    def AFT_register_initial(self, **kwargs):
+    def aft_register(self, reg_code=0x01, **kwargs):
         try:
-            return self.AFT_register_gaming_machine(reg_code=0x01)
+            return self.aft_register_gaming_machine(reg_code=reg_code)
         except Exception as e:
             self.log.error(e, exc_info=True)
             return None
 
-    def AFT_register(self, **kwargs):
-        return True
+    def aft_unregister(self, reg_code=0x80, **kwargs):
         try:
-            return self.AFT_register_gaming_machine(reg_code=0x00)
+            return self.aft_register_gaming_machine(reg_code=reg_code)
         except Exception as e:
             self.log.error(e, exc_info=True)
             return None
 
-    def AFT_unregister(self, **kwargs):
-        return True
-        try:
-            return self.AFT_register_gaming_machine(reg_code=0x80)
-        except Exception as e:
-            self.log.error(e, exc_info=True)
-            return None
-
-    def AFT_register_gaming_machine(self, reg_code=0xFF, **kwargs):
+    def aft_register_gaming_machine(self, reg_code=0xFF, **kwargs):
         # 73
-        cmd = [0x73, 0x00]
+        cmd = [0x73, 0x00, reg_code]
+
         if reg_code == 0xFF:
-            cmd.append(reg_code)
             cmd[1] = 0x01
         else:
-            cmd.append(reg_code)
-            tmp = self.asset_number + self.reg_key + self.POS_ID
+            tmp = self.asset_number + self.reg_key + self.pos_id
             cmd[1] = 0x1D
             count = 0
             for i in range(len(tmp) / 2):
-                cmd.append(int(tmp[count : count + 2], 16))
+                cmd.append(int(tmp[count: count + 2], 16))
                 count += 2
+
         data = self._send_command(cmd, crc_need=True, size=34)
-        # data = None
-        if data != None:
+
+        if data:
             aft_statement = {}
-            aft_statement["registration_status"] = AFT_REGISTRACION_STATUS[
+            aft_statement["registration_status"] = AFT_REGISTRATION_STATUS[
                 str(binascii.hexlify((data[2:3])))
             ]
             aft_statement["asset_number"] = str(binascii.hexlify(data[3:7]))
             aft_statement["registration_key"] = str(binascii.hexlify(data[7:27]))
             aft_statement["POS_ID"] = str(binascii.hexlify((data[27:])))
             return aft_statement
+
         return None
 
-    def AFT_game_lock(self, lock_timeout=100, condition=00, **kwargs):
-        return self.AFT_game_lock_and_status_request(
+    def aft_game_lock(self, lock_timeout=100, condition=00, **kwargs):
+        return self.aft_game_lock_and_status_request(
             lock_code=0x00, lock_timeout=lock_timeout, transfer_condition=condition
         )
 
-    def AFT_game_unlock(self, **kwargs):
-        return self.AFT_game_lock_and_status_request(lock_code=0x80)
+    def aft_game_unlock(self, **kwargs):
+        return self.aft_game_lock_and_status_request(lock_code=0x80)
 
-    def AFT_game_lock_and_status_request(
+    def aft_game_lock_and_status_request(
         self, lock_code=0x00, transfer_condition=00, lock_timeout=0, **kwargs
     ):
         # 74
-        cmd = [0x74]
-
-        cmd.append(lock_code)
-        cmd.append(transfer_condition)
-        cmd.extend(self.bcd_coder_array(lock_timeout, 2))
-        # cmd.addend(0x23)
+        cmd = [0x74, lock_code, transfer_condition, self.bcd_coder_array(lock_timeout, 2)]
 
         data = self._send_command(cmd, crc_need=True, size=40)
-        if data != None:
+        if data:
             aft_statement = {}
             aft_statement["asset_number"] = str(binascii.hexlify(bytearray(data[2:6])))
             aft_statement["game_lock_status"] = str(
@@ -2666,14 +2598,15 @@ class Sas:
             )
 
             return aft_statement
+
         return None
 
-    def AFT_cansel_request(self, **kwargs):
+    def aft_cancel_request(self, **kwargs):
         cmd = [0x72, 0x01, 0x80]
-        self.AFT_register()
+        self.aft_register()
         response = None
         data = self._send_command(cmd, crc_need=True, size=90)
-        if data != None:
+        if data:
             a = int(binascii.hexlify(bytearray(data[26:27])), 16)
             response = {
                 "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
@@ -2698,46 +2631,40 @@ class Sas:
                 "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
             }
         try:
-            self.AFT_unregister()
+            self.aft_unregister()
         except:
             self.log.warning("AFT UNREGISTER ERROR")
 
         if response["Transaction ID"] == hex(self.transaction)[2:-1]:
             return response
-        # self.log.warning('NO CLEAN POLL: %s', response)
+
         return False
 
-    def AFT_reciept_data(self, **kwargs):
-        # 75
-        return
+    def aft_receipt_data(self, **kwargs):
+        # TODO: 75
+        return NotImplemented
 
-    def AFT_set_custom_ticket_data(self, **kwargs):
-        # 76
-        return
+    def aft_set_custom_ticket_data(self, **kwargs):
+        # TODO: 76
+        return NotImplemented
 
-    def exnended_validation_status(
+    def extended_validation_status(
         self,
         control_mask=[0, 0],
         status_bits=[0, 0],
-        cashable_ticket_reciept_exp=0,
+        cashable_ticket_receipt_exp=0,
         restricted_ticket_exp=0,
         **kwargs
     ):
         # 7B
-        cmd = [0x7B, 0x08]
-
-        cmd.extend(control_mask)
-        cmd.extend(status_bits)
-        cmd.extend(self.bcd_coder_array(cashable_ticket_reciept_exp, 2))
-        cmd.extend(self.bcd_coder_array(restricted_ticket_exp, 2))
-
-        # cmd.addend(0x23)
+        cmd = [0x7B, 0x08, control_mask, status_bits, self.bcd_coder_array(cashable_ticket_receipt_exp, 2),
+               self.bcd_coder_array(restricted_ticket_exp, 2)]
 
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             aft_statement["asset_number"] = str(binascii.hexlify(bytearray(data[2:6])))
             aft_statement["status_bits"] = str(binascii.hexlify(bytearray(data[6:8])))
-            aft_statement["cashable_ticket_reciept_exp"] = str(
+            aft_statement["cashable_ticket_receipt_exp"] = str(
                 binascii.hexlify(bytearray(data[8:10]))
             )
             aft_statement["restricted_ticket_exp"] = str(
@@ -2745,166 +2672,172 @@ class Sas:
             )
 
             return data[1]
+
         return None
 
     def set_extended_ticket_data(self, **kwargs):
-        # 7C
-        return None
+        # TODO: 7C
+        return NotImplemented
 
     def set_ticket_data(self, **kwargs):
-        # 7D
-        return None
+        # TODO: 7D
+        return NotImplemented
 
     def current_date_time(self, **kwargs):
         # 7E
         cmd = [0x7E]
         data = self._send_command(cmd, crc_need=False, size=11)
-        if data != None:
+        if data:
             data = str(binascii.hexlify(bytearray(data[1:8])))
             return datetime.datetime.strptime(data, "%m%d%Y%H%M%S")
+
         return None
 
-    def recieve_date_time(self, dates, times, **kwargs):
+    def receive_date_time(self, dates, times, **kwargs):
         # 7F
         cmd = [0x7F]
-        my_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
+        fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
         count = 0
-        for i in range(len(my_cmd) / 2):
-            cmd.append(int(my_cmd[count : count + 2], 16))
+        for i in range(len(fmt_cmd) / 2):
+            cmd.append(int(fmt_cmd[count: count + 2], 16))
             count += 2
 
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return None
 
-    def recieve_progressive_amount(self, **kwargs):
-        # 80
-        return None
+        return False
 
-    def cumulative_progressive_wins(self, **kwargs):
-        # 83
-        return None
+    @staticmethod
+    def receive_progressive_amount(**kwargs):
+        # TODO: 80
+        return NotImplemented
 
-    def progressive_win_amount(self, **kwargs):
-        # 84
-        return None
+    @staticmethod
+    def cumulative_progressive_wins(**kwargs):
+        # TODO: 83
+        return NotImplemented
 
-    def SAS_progressive_win_amount(self, **kwargs):
-        # 85
-        return None
+    @staticmethod
+    def progressive_win_amount(**kwargs):
+        # TODO: 84
+        return NotImplemented
 
-    def recieve_multiple_progressive_levels(self, **kwargs):
-        # 86
-        return None
+    @staticmethod
+    def sas_progressive_win_amount(**kwargs):
+        # TODO: 85
+        return NotImplemented
 
-    def multiple_SAS_progresive_win_amounts(self, **kwargs):
-        # 87
-        return None
+    @staticmethod
+    def receive_multiple_progressive_levels(**kwargs):
+        # TODO: 86
+        return NotImplemented
 
-    def initiate_legacy_bonus_pay(self, mony, tax="00", games=None, **kwargs):
+    @staticmethod
+    def multiple_sas_progressive_win_amounts(**kwargs):
+        # TODO: 87
+        return NotImplemented
+
+    def initiate_legacy_bonus_pay(self, money, tax="00", games=None, **kwargs):
         # 8A
-        if games == None:
+        if not games:
             for i in range(3):
                 try:
-                    game_selected = self.selected_game_number(in_hex=False)
+                    games = self.selected_game_number(in_hex=False)
                 except:
-                    game_selected = None
-                if game_selected == None:
+                    pass
+                if not games:
                     time.sleep(0.04)
                 else:
                     break
-        else:
-            game_selected = games
-        if game_selected == None:
-            return None
-        elif game_selected == 0:
-            return None
-        elif game_selected < 0:
+
+        if not games or games <= 0:
             return None
 
-        cmd = str(int(round(mony / self.denom, 2)))
-        # cmd = cmd.replace('.', '')
-        cmd = "0" * (8 - len(cmd)) + cmd
-        my_cmd = cmd + tax
+        t_cmd = str(int(round(money / self.denom, 2)))
+        t_cmd = ("0" * (8 - len(t_cmd)) + t_cmd) + tax
+
         cmd = [0x8A]
         count = 0
-        for i in range(len(my_cmd) / 2):
-            cmd.append(int(my_cmd[count : count + 2], 16))
+        for i in range(len(t_cmd) / 2):
+            cmd.append(int(t_cmd[count: count + 2], 16))
             count += 2
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return None
 
-    def initiate_multiplied_jackpot_mode(self, **kwargs):
-        # 8B
-        return None
+        return False
 
-    def enter_exit_tournament_mode(self, **kwargs):
-        # 8C
-        return None
+    @staticmethod
+    def initiate_multiplied_jackpot_mode(**kwargs):
+        # TODO: 8B
+        return NotImplemented
 
-    def card_info(self, **kwargs):
-        # 8E
-        return None
+    @staticmethod
+    def enter_exit_tournament_mode(**kwargs):
+        # TODO: 8C
+        return NotImplemented
 
-    def physical_reel_stop_info(self, **kwargs):
-        # 8F
-        return None
+    @staticmethod
+    def card_info(**kwargs):
+        # TODO: 8E
+        return NotImplemented
 
-    def legacy_bonus_win_info(self, **kwargs):
-        # 90
-        return None
+    @staticmethod
+    def physical_reel_stop_info(**kwargs):
+        # TODO: 8F
+        return NotImplemented
+
+    @staticmethod
+    def legacy_bonus_win_info(**kwargs):
+        # TODO: 90
+        return NotImplemented
 
     def remote_handpay_reset(self, **kwargs):
         # 94
         cmd = [0x94]
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return
 
-    def tournament_games_played(self, **kwargs):
-        # 95
-        return
+        return False
 
-    def tournament_games_won(self, **kwargs):
-        # 96
-        return
+    @staticmethod
+    def tournament_games_played(**kwargs):
+        # TODO: 95
+        return NotImplemented
 
-    def tournament_credits_wagered(self, **kwargs):
-        # 97
-        return
+    @staticmethod
+    def tournament_games_won(**kwargs):
+        # TODO: 96
+        return NotImplemented
 
-    def tournament_credits_won(self, **kwargs):
-        # 98
-        return
+    @staticmethod
+    def tournament_credits_wagered(**kwargs):
+        # TODO: 97
+        return NotImplemented
 
-    def meters_95_98(self, **kwargs):
-        # 99
-        return
+    @staticmethod
+    def tournament_credits_won(**kwargs):
+        # TODO: 98
+        return NotImplemented
+
+    @staticmethod
+    def meters_95_98(**kwargs):
+        # TODO: 99
+        return NotImplemented
 
     def legacy_bonus_meters(self, denom=True, n=0, **kwargs):
         # 9A
         cmd = [0x9A, ((n >> 8) & 0xFF), (n & 0xFF)]
-        # cmd.extend([(n&0xFF), ((n>>8)&0xFF)])
-        # cmd=[0x19]
         data = self._send_command(cmd, crc_need=True, size=18)
-
-        if data != None:
+        if data:
             meters = {}
-            if denom == False:
-                meters["game bumber"] = int(binascii.hexlify(bytearray(data[2:3])))
+            if not denom:
+                meters["game number"] = int(binascii.hexlify(bytearray(data[2:3])))
                 meters["deductible"] = int(binascii.hexlify(bytearray(data[3:7])))
                 meters["non-deductible"] = int(binascii.hexlify(bytearray(data[7:11])))
                 meters["wager match"] = int(binascii.hexlify(bytearray(data[11:15])))
-
             else:
-                meters["game bumber"] = int(binascii.hexlify(bytearray(data[2:3])))
+                meters["game number"] = int(binascii.hexlify(bytearray(data[2:3])))
                 meters["deductible"] = round(
                     int(binascii.hexlify(bytearray(data[3:7]))) * self.denom, 2
                 )
@@ -2915,39 +2848,33 @@ class Sas:
                     int(binascii.hexlify(bytearray(data[11:15]))) * self.denom, 2
                 )
             return meters
+
         return None
 
-    def stop_autorebet(self, **kwargs):
-        # AA00
-        cmd = [0xAA, 0x00]
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
+    def toggle_autorebet(self, val=True, **kwargs):
+        cmd = [0xAA]
+        if not val:
+            # AA00
+            cmd.append(0x00)
+        else:
+            # AA01
+            cmd.append(0x01)
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
-        # else:
-        return None
-        # return
 
-    def start_autorebet(self, **kwargs):
-        # AA01
-        cmd = [0xAA, 0x01]
-        if self._send_command(cmd, True, crc_need=True) == self.adress:
-            return True
-        # else:
-        return None
-        # return
+        return False
 
-    def enabled_features(self, game_nimber=0, **kwargs):
+    def enabled_features(self, game_number=0, **kwargs):
         # A0
-        cmd = [0xA0]
-
-        cmd.extend(self.bcd_coder_array(game_nimber, 2))
-
+        # FIXME: This makes no sense
+        cmd = [0xA0, self.bcd_coder_array(game_number, 2)]
         data = self._send_command(cmd, True, crc_need=True)
-        if data != None:
+        if data:
             aft_statement["game_number"] = str(binascii.hexlify(bytearray(data[1:3])))
             aft_statement["features_1"] = data[3]
             aft_statement["features_2"] = data[4]
             aft_statement["features_3"] = data[5]
-
             game_features["game_number"] = aft_statement.get("game_number")
             if data[3] & 0b00000001:
                 game_features["jackpot_multiplier"] = 1
@@ -2955,17 +2882,20 @@ class Sas:
                 game_features["jackpot_multiplier"] = 0
 
             if data[3] & 0b00000010:
-                game_features["AFT_bonus_avards"] = 1
+                game_features["AFT_bonus_awards"] = 1
             else:
-                game_features["AFT_bonus_avards"] = 0
+                game_features["AFT_bonus_awards"] = 0
+
             if data[3] & 0b00000100:
                 game_features["legacy_bonus_awards"] = 1
             else:
                 game_features["legacy_bonus_awards"] = 0
+
             if data[3] & 0b00001000:
                 game_features["tournament"] = 1
             else:
                 game_features["tournament"] = 0
+
             if data[3] & 0b00010000:
                 game_features["validation_extensions"] = 1
             else:
@@ -2979,59 +2909,70 @@ class Sas:
                 game_features["ticket_redemption"] = 0
 
             return data[1]
+
         return None
 
-    def cashout_limit(self, **kwargs):
-        # A4
-        return
+    @staticmethod
+    def cashout_limit(**kwargs):
+        # TODO: A4
+        return NotImplemented
 
-    def enable_jackpot_handpay_reset_method(self, **kwargs):
-        # A8
-        return
+    @staticmethod
+    def enable_jackpot_handpay_reset_method(**kwargs):
+        # TODO: A8
+        return NotImplemented
 
-    def extended_meters_game_alt(self, n=1, **kwargs):
-        # AF
-        return
+    @staticmethod
+    def extended_meters_game_alt(n=1, **kwargs):
+        # TODO: AF
+        return NotImplemented
 
-    def multi_denom_preamble(self, **kwargs):
-        # B0
-        return
+    @staticmethod
+    def multi_denom_preamble(**kwargs):
+        # TODO: B0
+        return NotImplemented
 
-    def current_player_denomination(self, **kwargs):
-        # B1
-        return
+    @staticmethod
+    def current_player_denomination(**kwargs):
+        # TODO: B1
+        return NotImplemented
 
-    def enabled_player_denominations(self, **kwargs):
-        # B2
-        return
+    @staticmethod
+    def enabled_player_denominations(**kwargs):
+        # TODO: B2
+        return NotImplemented
 
-    def token_denomination(self, **kwargs):
-        # B3
-        return
+    @staticmethod
+    def token_denomination(**kwargs):
+        # TODO: B3
+        return NotImplemented
 
-    def wager_category_info(self, **kwargs):
-        # B4
-        return
+    @staticmethod
+    def wager_category_info(**kwargs):
+        # TODO: B4
+        return NotImplemented
 
-    def extended_game_info(self, n=1, **kwargs):
-        # B5
-        return
+    @staticmethod
+    def extended_game_info(n=1, **kwargs):
+        # TODO: B5
+        return NotImplemented
 
-    def event_response_to_long_poll(self, **kwargs):
-        # FF
-        return
+    @staticmethod
+    def event_response_to_long_poll(**kwargs):
+        # TODO: FF
+        return NotImplemented
 
-    def bcd_coder_array(self, value=0, lenght=4, **kwargs):
-        return self.int_to_bcd(value, lenght)
+    def bcd_coder_array(self, value=0, length=4, **kwargs):
+        return self._int_to_bcd(value, length)
 
-    def int_to_bcd(self, number=0, lenght=5, **kwargs):
-        n = 0
-        m = 0
-        bval = 0
-        p = lenght - 1
+    @staticmethod
+    def _int_to_bcd(number=0, length=5, **kwargs):
+        n = m = bval = 0
+        p = length - 1
         result = []
-        for i in range(0, lenght):
+        for i in range(0, length):
             result.extend([0x00])
+
         while p >= 0:
             if number != 0:
                 digit = number % 10
@@ -3039,6 +2980,7 @@ class Sas:
                 m = m + 1
             else:
                 digit = 0
+
             if n & 1:
                 bval |= digit << 4
                 result[p] = bval
@@ -3046,93 +2988,12 @@ class Sas:
                 bval = 0
             else:
                 bval = digit
+
             n = n + 1
+
         return result
 
-
-class SAS_USB(Sas):
-    def _send_command(
-        self, command, no_response=False, timeout=None, crc_need=True, size=1
-    ):
-        # if timeout == None:
-        #     timeout = self.timeout + 1
-        # time.sleep(0.04)
-        busy = True
-        response = b""
-        # self.my_log.flush()
-        try:
-            # if self.poll_adres == '82':
-            #     self.poll_adres = '80'
-            # else:
-            #     self.poll_adres = '82'
-
-            buf_header = [self.adress]
-            self._conf_port()
-            # self.connection.write(('80' + self.mashin_n).decode("hex"))
-            # self.close()
-            # self.connection.parity = serial.PARITY_SPACE
-            # self.open()
-
-            buf_header.extend(command)
-            buf_count = len(command)
-            # buf_header[2]=buf_count+2
-            if crc_need == True:
-                crc = CRC16Kermit().calculate(str(bytearray(buf_header)))
-                buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-            self.log.debug(buf_header)
-            # time.sleep(0.04)
-            self.connection.write([self.poll_adress, self.adress])
-            # self.close()
-            self.connection.parity = serial.PARITY_SPACE
-            # self.open()
-            # my_log = open('/home/colibri/dump.log', 'w')
-            # self.my_log.write('TX %s: %s\n' % (time.time(), '82'+ binascii.hexlify(bytearray(buf_header))))
-            # print self.connection.portstr
-            # self.connection.write([0x31, 0x32,0x33,0x34,0x35])
-            self.connection.write((buf_header[1:]))
-
-        except Exception as e:
-            self.log.error(e, exc_info=True)
-
-        try:
-            buffer = []
-            #            self.connection.flushInput()
-            # time.sleep(0.04)
-            # t = time.time()
-            # while time.time() - t < timeout:
-            response = self.connection.read(size)
-            if no_response == True:
-                try:
-                    return int(binascii.hexlify(response))
-                except ValueError as e:
-                    self.log.warning("no sas response %s" % (str(buf_header[1:])))
-                    return None
-            #     else:
-            #         # response += self.connection.read(size)
-            #         if (self.checkResponse(response, size) <> False):
-            #             break
-            #
-            # if time.time() - t >= timeout:
-            #     self.log.warning("sas timeout")
-            #     # buffer.append(response)
-            #     # print binascii.hexlify(bytearray(response))
-            #     return None
-
-            busy = False
-            response = self.checkResponse(response)
-            self.log.debug("sas response %s", binascii.hexlify(response))
-            if response == "":
-                response = None
-                # self.log.info('no sas response')
-            return response
-            # return None
-        except Exception as e:
-            self.log.error(e, exc_info=True)
-
-        busy = False
-        return None
-
-
+'''
 if __name__ == "__main__":
     sas = Sas("/dev/ttyUSB0")
     print(sas.start())
@@ -3146,3 +3007,4 @@ if __name__ == "__main__":
     # print sas.AFT_get_last_transaction()
     # print sas.AFT_in(0.05)
     # print sas.AFT_clean_transaction_poll()
+'''
