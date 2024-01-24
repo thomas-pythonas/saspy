@@ -38,15 +38,19 @@ eft_statement = json.loads("dictionaries/eft_statement.json")
 game_features = json.loads("dictionaries/game_features.json")
 
 
-
 class Sas:
-    def __init__( self, port, timeout=2, poll_address = 0x82,
-                  denom = 0.01, asset_number = "01000000",
-                  reg_key = "0000000000000000000000000000000000000000",
-                  pos_id = "B374A402",
-                  key = "44",
-                  debug_level = "DEBUG"
-                  ):
+    def __init__(
+        self,
+        port,
+        timeout=2,
+        poll_address=0x82,
+        denom=0.01,
+        asset_number="01000000",
+        reg_key="0000000000000000000000000000000000000000",
+        pos_id="B374A402",
+        key="44",
+        debug_level="DEBUG",
+    ):
         # Let's address some internal var
         self.poll_timeout = timeout
         self.address = None
@@ -62,9 +66,7 @@ class Sas:
 
         # Let's Init the Logging system
         self.log = log_to_stderr()
-        self.log.setLevel(
-            logging.getLevelName(debug_level)
-        )
+        self.log.setLevel(logging.getLevelName(debug_level))
 
         # Open the serial connection
         while 1:

@@ -7,15 +7,15 @@ config_handler.read_config_file()
 
 
 sas = Sas(
-    port = config_handler.get_config_value("connection", "serial_port"),
-    timeout = config_handler.get_config_value("connection", "timeout"),
-    poll_address = config_handler.get_config_value("events", "poll_address"),
-    denom = config_handler.get_config_value("machine", "denomination"),
-    asset_number = config_handler.get_config_value("machine", "asset_number"),
-    reg_key = config_handler.get_config_value("machine", "reg_key"),
-    pos_id = config_handler.get_config_value("machine", "pos_id"),
-    key = config_handler.get_config_value("security", "key"),
-    debug_level = "DEBUG",
+    port=config_handler.get_config_value("connection", "serial_port"),
+    timeout=config_handler.get_config_value("connection", "timeout"),
+    poll_address=config_handler.get_config_value("events", "poll_address"),
+    denom=config_handler.get_config_value("machine", "denomination"),
+    asset_number=config_handler.get_config_value("machine", "asset_number"),
+    reg_key=config_handler.get_config_value("machine", "reg_key"),
+    pos_id=config_handler.get_config_value("machine", "pos_id"),
+    key=config_handler.get_config_value("security", "key"),
+    debug_level="DEBUG",
 )
 
 print(sas.start())
