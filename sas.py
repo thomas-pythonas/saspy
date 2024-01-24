@@ -2129,6 +2129,9 @@ class Sas:
         if from_egm:
             self.aft_get_last_trx()
 
+        if self.transaction is None:
+            self.aft_get_last_trx()
+
         self.transaction += 1
         transaction = hex(self.transaction)[2:-1]
         count = 0
