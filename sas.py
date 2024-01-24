@@ -41,34 +41,37 @@ game_features = json.loads("dictionaries/game_features.json")
 config_handler = ConfigHandler()
 config_handler.read_config_file()
 
+
 class Sas:
     def __init__(self):
         # Let's address some internal var
         self.address = None
         self.machine_n = None
         self.aft_get_last_transaction = True
-        self.denom = config_handler.get_config_value('machine', 'denomination')
-        self.asset_number = config_handler.get_config_value('machine', 'asset_number')
-        self.reg_key = config_handler.get_config_value('machine', 'reg_key')
-        self.pos_id = config_handler.get_config_value('machine', 'pos_id')
+        self.denom = config_handler.get_config_value("machine", "denomination")
+        self.asset_number = config_handler.get_config_value("machine", "asset_number")
+        self.reg_key = config_handler.get_config_value("machine", "reg_key")
+        self.pos_id = config_handler.get_config_value("machine", "pos_id")
         self.transaction = None
-        self.my_key = config_handler.get_config_value('security', 'key')
-        self.poll_address = config_handler.get_config_value('events', 'poll_address')
+        self.my_key = config_handler.get_config_value("security", "key")
+        self.poll_address = config_handler.get_config_value("events", "poll_address")
 
         # Let's Init the Logging system
         self.log = log_to_stderr()
-        self.log.setLevel(logging.getLevelName(config_handler.get_config_value('debug', 'level')))
+        self.log.setLevel(
+            logging.getLevelName(config_handler.get_config_value("debug", "level"))
+        )
 
         # Open the serial connection
         while 1:
             try:
                 self.connection = serial.Serial(
-                    port=config_handler.get_config_value('connection', 'serial_port'),
-                    baudrate=config_handler.get_config_value('connection', 'baudrate'),
-                    timeout=config_handler.get_config_value('connection', 'timeout')
+                    port=config_handler.get_config_value("connection", "serial_port"),
+                    baudrate=config_handler.get_config_value("connection", "baudrate"),
+                    timeout=config_handler.get_config_value("connection", "timeout"),
                 )
                 self.close()
-                self.timeout = config_handler.get_config_value('connection', 'timeout')
+                self.timeout = config_handler.get_config_value("connection", "timeout")
                 self.log.info("Connection Successful")
                 break
             except:
@@ -135,7 +138,9 @@ class Sas:
 
     def _conf_event_port(self):
         self.close()
-        self.connection.timeout = config_handler.get_config_value('events', 'poll_timeout')
+        self.connection.timeout = config_handler.get_config_value(
+            "events", "poll_timeout"
+        )
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
         self.open()
@@ -217,7 +222,7 @@ class Sas:
                 except ValueError as e:
                     self.log.critical("no sas response %s" % (str(buf_header[1:])))
                     return None
-            
+
             response = self._check_response(response)
 
             self.log.debug("sas response %s", binascii.hexlify(response))
@@ -1042,7 +1047,9 @@ class Sas:
 
         return None
 
-    def set_secure_enhanced_validation_id( self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs ):
+    def set_secure_enhanced_validation_id(
+        self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs
+    ):
         # 4C
         # FIXME: set_secure_enhanced_validation_ID
         cmd = [0x4C, machine_id, seq_num]
@@ -1461,7 +1468,9 @@ class Sas:
                 raise AFTBadAmount
 
         last_transaction = self.aft_format_transaction()
-        len_transaction_id = hex(len(last_transaction) // 2)[2:] # the division result should be converted to an integer before using hex, added extra / to solve this
+        len_transaction_id = hex(len(last_transaction) // 2)[
+            2:
+        ]  # the division result should be converted to an integer before using hex, added extra / to solve this
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -1484,7 +1493,9 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) // 2): # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
+        for i in range(
+            len(cmd) // 2
+        ):  # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -1520,7 +1531,9 @@ class Sas:
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])), # WARNING: technically should be (27 + 2 * a) due to an off error....
+                "Transaction ID": binascii.hexlify(
+                    bytearray(data[27 : (27 + a)])
+                ),  # WARNING: technically should be (27 + 2 * a) due to an off error....
             }
         try:
             self.aft_unregister()
@@ -2528,7 +2541,7 @@ class Sas:
         # A0
         # FIXME: This makes no sense
         # Basically tells which feature a selected games has. - Antonio
-        
+
         cmd = [0xA0, self._bcd_coder_array(game_number, 2)]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
