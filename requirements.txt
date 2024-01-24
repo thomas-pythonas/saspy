@@ -1,0 +1,3 @@
+pythoncrc
+pyserial
+pytest
