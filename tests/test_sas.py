@@ -8,7 +8,7 @@ def sas_instance():
     with patch('serial.Serial') as mock_serial:
         mock_serial_instance = mock_serial.return_value
         mock_serial_instance.read.return_value = b'\x01'  # I'm pretty that this is not enough
-        sas = Sas()
+        sas = Sas(port="/dev/ttyUSB0")
         yield sas
 
 def test_sas_init(sas_instance):

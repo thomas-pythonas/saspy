@@ -30,14 +30,5 @@ def check_and_install_dependencies():
                 sys.exit(1)
 
 
-print("Checking for config file....")
-
-config_file = os.path.join(os.path.dirname(__file__), '../config.yml')
-if not os.path.exists(config_file):
-    print("Config File not found, exiting...")
-    sys.exit(1)
-
-print("Config file found ! Moving on...")
 print("Checking for required python modules...")
 check_and_install_dependencies()
-print()
