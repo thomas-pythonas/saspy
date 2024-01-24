@@ -623,8 +623,9 @@ class Sas:
                 except ValueError as e:
                     self.log.warning("no sas response %s" % (str(buf_header[1:])))
                     return None
+            
+            response = self._check_response(response)
 
-            response = self.check_response(response)
             self.log.debug("sas response %s", binascii.hexlify(response))
 
             return response
@@ -638,7 +639,7 @@ class Sas:
         return None
 
     @staticmethod
-    def check_response(rsp):
+    def _check_response(rsp):
         if rsp == "":
             raise NoSasConnection
 
@@ -1099,7 +1100,7 @@ class Sas:
 
         return None
 
-    def gaming_machine_ID(self):
+    def gaming_machine_id(self):
         # 1F
         cmd = [0x1F]
         return self._send_command(cmd, True, crc_need=False)
@@ -1526,7 +1527,7 @@ class Sas:
 
         return None
 
-    def total_number_of_games_implimented(self, **kwargs):
+    def total_number_of_games_implemented(self, **kwargs):
         # 51
         cmd = [0x51]
         # FIXME: cmd.extend(type_of_validation)
@@ -1615,7 +1616,7 @@ class Sas:
 
         return None
 
-    def SAS_version_gaming_machine_serial_ID(self, **kwargs):
+    def sas_version_gaming_machine_serial_id(self, **kwargs):
         # 54
         cmd = [0x54, 0x00]
         data = self._send_command(cmd, crc_need=False, size=20)
@@ -2991,7 +2992,7 @@ class Sas:
         # TODO: FF
         return NotImplemented
 
-    def bcd_coder_array(self, value=0, length=4, **kwargs):
+    def _bcd_coder_array(self, value=0, length=4, **kwargs):
         return self._int_to_bcd(value, length)
 
     @staticmethod
@@ -3027,9 +3028,9 @@ class Sas:
 if __name__ == "__main__":
     sas = Sas("/dev/ttyUSB0")
     print(sas.start())
-    print(sas.SAS_version_gaming_machine_serial_ID())
-    print(sas.startup())
-    #mac_id = sas.gaming_machine_ID()
+    print(sas.sas_version_gaming_machine_serial_id())
+    #print(sas.startup())
+    #print(sas.gaming_machine_id())
     #print(sas.selected_game_number(in_hex=False))
     #print(sas.en_dis_game(mac_id, False))
     # print(sas.enter_maintenance_mode())
