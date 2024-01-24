@@ -11,7 +11,7 @@ from PyCRC.CRC16Kermit import CRC16Kermit
 from multiprocessing import log_to_stderr
 
 from error_handler import *
-from config_handler import *
+
 
 AFT_LOCK_STATUS = json.loads("dictionaries/aft_lock_status.json")
 
@@ -37,41 +37,45 @@ eft_statement = json.loads("dictionaries/eft_statement.json")
 
 game_features = json.loads("dictionaries/game_features.json")
 
-# Let's init the configuration file
-config_handler = ConfigHandler()
-config_handler.read_config_file()
 
 
 class Sas:
-    def __init__(self):
+    def __init__( self, port, timeout=2, poll_address = 0x82,
+                  denom = 0.01, asset_number = "01000000",
+                  reg_key = "0000000000000000000000000000000000000000",
+                  pos_id = "B374A402",
+                  key = "44",
+                  debug_level = "DEBUG"
+                  ):
         # Let's address some internal var
+        self.poll_timeout = timeout
         self.address = None
         self.machine_n = None
         self.aft_get_last_transaction = True
-        self.denom = config_handler.get_config_value("machine", "denomination")
-        self.asset_number = config_handler.get_config_value("machine", "asset_number")
-        self.reg_key = config_handler.get_config_value("machine", "reg_key")
-        self.pos_id = config_handler.get_config_value("machine", "pos_id")
+        self.denom = denom
+        self.asset_number = asset_number
+        self.reg_key = reg_key
+        self.pos_id = pos_id
         self.transaction = None
-        self.my_key = config_handler.get_config_value("security", "key")
-        self.poll_address = config_handler.get_config_value("events", "poll_address")
+        self.my_key = key
+        self.poll_address = poll_address
 
         # Let's Init the Logging system
         self.log = log_to_stderr()
         self.log.setLevel(
-            logging.getLevelName(config_handler.get_config_value("debug", "level"))
+            logging.getLevelName(debug_level)
         )
 
         # Open the serial connection
         while 1:
             try:
                 self.connection = serial.Serial(
-                    port=config_handler.get_config_value("connection", "serial_port"),
-                    baudrate=config_handler.get_config_value("connection", "baudrate"),
-                    timeout=config_handler.get_config_value("connection", "timeout"),
+                    port=port,
+                    baudrate=19200,
+                    timeout=timeout,
                 )
                 self.close()
-                self.timeout = config_handler.get_config_value("connection", "timeout")
+                self.timeout = timeout
                 self.log.info("Connection Successful")
                 break
             except:
@@ -138,9 +142,7 @@ class Sas:
 
     def _conf_event_port(self):
         self.close()
-        self.connection.timeout = config_handler.get_config_value(
-            "events", "poll_timeout"
-        )
+        self.connection.timeout = self.poll_timeout
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
         self.open()
