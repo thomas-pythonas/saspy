@@ -1,0 +1,6 @@
+{
+    "00": "Receipt printed",
+    "20": "Receipt printing in progress (not complete)",
+    "40": "Receipt pending (not complete)",
+    "ff": "No receipt requested or receipt not printed"
+}

@@ -1,13 +1,53 @@
-# saspy
-Slots accounting system protocol based on Python for arm architecture
+# SASPY
+Slots Accounting System (SAS) Protocol is a standard when comes to Slot Machine and VLTs.
 
-The SAS library was made using python and can be used for linux-based single-board computers (Raspberry, Orange PI, Banana Pi).
-The Library is used for connecting to EGM by RS-232 protocol and for receiving and processing some data of SAS-protocol.
+## How To
+```bash
+$ git clone https://github.com/zacharytomlinson/saspy.git
+$ cd saspy
+$ pip install -r requirements.txt
+$ nano config.yml # Adjust according your needs
+$ python example.py
+```
 
-SAS  (Slot  Accounting  System)  protocol  is  the  de  facto  casino communications  standards  designed  to  automate  slot  machine  meter  reporting  and event  logging,  player  tracking,  bonusing,  ticketing  and  cashless  gaming. 
+# Notes
+## Raspberry Hardware Limitation
+As per SAS documentation, for the connection, you need:
+> 19.2 KBaud in a "wakeup" mode. The 11-bit data packet consists of one start bit, eight data bits, a
+> ninth ‘wakeup’ bit, and one stop bit.
 
-The EGM and SMIB communicate each other in SAS protocol standards, whereas  communication  between  the  SMIB  and  host  is  not  standardized,  which interoperability  and  standards  issue  is  resolved  by  new  standards,  G2S  (Game to System)  protocol.  SMIB also  provides touch  screen and  card readers  for AFT  and player tracking service. 
+I won't go into detail on why the raspberry will never work with these settings BUT i'm gonna share a link that you can read whenever you want that explains WHY. [HERE](https://raspberrypi.stackexchange.com/questions/45570/how-do-i-make-serial-work-on-the-raspberry-pi3-pizerow-pi4-or-later-models/107780#107780) for the explanation.
 
-The  System  architecture  of  SAS  Protocol:  SAS  protocol  is used  for  communication between EGM and SMIB. SAS protocol consists of 3 layers of physical layer, link layer, and application layer. The  physical  layer  leverages  RS-232  at  9.2kbps  of  1  start  bit,  8  data  bits,  and 1wakeup bit  and 1 stop bit. The  wakeup bit is used for  signaling the frame start byte and  needs  special  care  in  implementation  (described  later).  Master-slave  polling mechanism  is  used  for  the  medium  access  control  similar  to  USB  and  traditional remote terminal system. Each EGM is assigned a link address of 1 to 127. ‘0’ is used for  broadcasting.  The  polling  rate ranges  from 200ms  to 5s  but can  be reduced  to 40ms when EGM support RTE (real time event) mode.   SMIB uses two different types of polls, GP (general poll) and LP (long poll). GP is one  byte  EGM  address  with  wakeup  bit  set,  and  polls  events  generated  in  the receiving EGM system. The  receiving  EGM  should  respond with 1 byte event code, which is  called  ‘exception’  in  the specification.  The  exceptions include  non-priority exceptions such as no event, game start, game end, system tilt, and priority exceptions such as  handpay condition, ticket out, ticket in,  and  fund-transfer request.  LP  is used for  SMIB  to send  command  to  EGMs and  classified  into  R(read)-type,  S(set)-type, M(multi-game)-type, and G (global)-type. LP starts with 1 byte command value with wakeup bit set, and the lengths of LP are fixed or variable depending on the command. All  LP  except  R-type  contains  CRC-16  (cyclic  redundancy  check)  for  bit  error detection. The  response frame uses the similar format but with wakeup bit off. SMIB use implied ACK mechanism for confirming the receipt. 
+So, in order to make your raspberry talk with the machine, use an usb rs232 cable.....I used this [one](https://www.amazon.com/USB-Serial-Adapter-Prolific-PL-2303/dp/B00GRP8EZU/ref=sr_1_1_sspa?dib=eyJ2IjoiMSJ9.eT7IwLbFTyi5P6wiZqvnXrIsQpdtfPz_M46xtQa_S1I6h-lpFonAvq5YC5xJqm4vO8e3APmv6ZveRIHnEk3JvZ7RPORl8CFQWSUM226Dz0JssJAFQzWxU_Rk-YZaVXY5yPT9ZX-bqG0CDKUEzPruTJWEFg-ITUZtUOwr8KLTrvxvVg-ounmiZNAaizmQvxjrTdVozOF4iRbI5UF54oqfyn1obbD9whyaS_eGnl-TRcU.CRPZSqj6-D9E9pUJExtcBxGZd89oO6OAewGmvDxATTU&dib_tag=se&keywords=prolific%2Busb%2Bto%2Bserial&qid=1705598420&sr=8-1-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1).
+## Good to know
+### Event Reporting
+Basically you have 2 ways: ***Standard event poll*** and ***real time event poll***.
 
-SAS Protocol Application Functions: ROM signature request, Metric, Progressive broadcast, Tournament operation, RTE (real time event), Bonus Controller, Jackpot hand-pay, TITO(Ticket in/out), Multi-denomination, AFT, Component Authentication
+The **standard event poll** works with a FIFO memory and in real world use cases is kinda useless (unless you need to store the history of this machine status). You can call this event simply using the `event_poll` method in the code.
+
+When you start the **real time event reporting** the machine, no matter what you ask, will always reply with the current event in the machine...leading to badcrc error and whatnot...plus the real time event responses are not mapped in the code (don't worry...im working on it). The function, in the code, to enable this is `en_dis_rt_event_reporting`.
+
+Of course i needed the real time event reporting (to bind some actions) and at same time use some of the `aft_*` functions in the code.
+
+To solve this issues i had to use the operator page on the machine to enable a second channel and buy a second prolific usb rs232 cable....
+
+In this way on a channel i enabled the real time event reporting and on the second channel i could use the script normally (and the AFT functions) without problems.....
+
+Of course...this is a way created out of "no time"....if somebody has a better idea im all ear !
+
+## Dictionaries Notes
+### GPOLL
+**"4f": "Bill accepted"** 
+- Non-RTE mode: use this for all bills without explicit denomination. 
+- RTE mode: use for all bill denominations.
+
+**"50": "$200.00 bill accepted"**
+- Non-RTE only
+
+# Authors
+This project was initiated by [thomas-pythonas](https://github.com/thomas-pythonas) in 2018 and has no update since then.
+
+Current author and mantainer are:
+
+- [zacharytomlinson](https://github.com/zacharytomlinson)
+- [well-it-wasnt-me](https://github.com/well-it-wasnt-me)

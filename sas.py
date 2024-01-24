@@ -5,480 +5,74 @@ import time
 import binascii
 import logging
 import datetime
+import json
 
 from PyCRC.CRC16Kermit import CRC16Kermit
 from multiprocessing import log_to_stderr
 
-EVENTS_POLL_TIMEOUT = 0.2
+from error_handler import *
+from config_handler import *
 
-AFT_LOCK_STATUS = {
-    "00": "Game locked",
-    "40": "Game lock pending",
-    "ff": "Game not locked",
-}
+AFT_LOCK_STATUS = json.loads("dictionaries/aft_lock_status.json")
 
-AFT_REGISTRATION_STATUS = {
-    "00": "Gaming machine registration ready",
-    "01": "Gaming machine registered",
-    "40": "Gaming machine registration pending",
-    "80": "Gaming machine not registered",
-}
+AFT_REGISTRATION_STATUS = json.loads("dictionaries/aft_registration_status.json")
 
-AFT_TRANSFER_STATUS = {
-    "00": "Full transfer successful",
-    "01": "Partial transfer successful Binary codes 010xxxxx indicate transfer pending",
-    "40": "Transfer pending (not complete)",
-    "80": "Transfer cancelled by host",
-    "81": "Transaction ID not unique (same as last successful transfer logged in history)",
-    "82": "Not a valid transfer function (unsupported type, amount, index, etc.)",
-    "83": "Not a valid transfer amount or expiration (non-BCD, etc.)",
-    "84": "Transfer amount exceeds the gaming machine transfer limit",
-    "85": "Transfer amount not an even multiple of gaming machine denomination",
-    "86": "Gaming machine unable to perform partial transfers to the host",
-    "87": "Gaming machine unable to perform transfers at this time (door open, tilt, disabled, cashout in progress, etc.)",
-    "88": "Gaming machine not registered (required for debit transfers)",
-    "89": "Registration key does not match",
-    "8a": "No POS ID (required for debit transfers)",
-    "8b": "No won credits available for cashout",
-    "8c": "No gaming machine denomination set (unable to perform cents to credits conversion)",
-    "8d": "Expiration not valid for transfer to ticket (already expired)",
-    "8e": "Transfer to ticket device not available",
-    "8f": "Unable to accept transfer due to existing restricted amounts from different pool",
-    "90": "Unable to print transaction receipt (receipt device not currently available)",
-    "91": "Insufficient data to print transaction receipt (required fields missing)",
-    "92": "Transaction receipt not allowed for specified transfer type",
-    "93": "Asset number zero or does not match",
-    "94": "Gaming machine not locked (transfer specified lock required)",
-    "95": "Transaction ID not valid",
-    "9f": "Unexpected error Binary codes 110xxxxx indicate incompatible or unsupported poll",
-    "c0": "Not compatible with current transfer in progress",
-    "c1": "Unsupported transfer code Binary codes 111xxxxx indicate no transfer information available",
-    "ff": "No transfer information available",
-    # ' ': 'No response',
-}
+AFT_TRANSFER_STATUS = json.loads("dictionaries/aft_transfer_status.json")
 
-AFT_RECEIPT_STATUS = {
-    "00": "Receipt printed",
-    "20": "Receipt printing in progress (not complete)",
-    "40": "Receipt pending (not complete)",
-    "ff": "No receipt requested or receipt not printed",
-}
+AFT_RECEIPT_STATUS = json.loads("dictionaries/aft_receipt_status.json")
 
-AFT_TRANSFER_TYPE = {
-    "00": "Transfer in-house amount from host to gaming machine",
-    "10": "Transfer bonus coin out win amount from host to gaming machine",
-    "11": "Transfer bonus jackpot win amount from host to gaming machine (force attendant pay lockup)",
-    "20": "Transfer in-house amount from host to ticket (only one amount type allowed per transfer)",
-    "40": "Transfer debit amount from host to gaming machine",
-    "60": "Transfer debit amount from host to ticket",
-    "80": "Transfer in-house amount from gaming machine to host",
-    "90": "Transfer win amount (in-house) from gaming machine to host",
-}
+AFT_TRANSFER_TYPE = json.loads("dictionaries/aft_transfer_type.json")
 
-DENOMINATION = {
-    "00": None,
-    "01": 0.01,
-    "17": 0.02,
-    "02": 0.05,
-    "03": 0.10,
-    "04": 0.25,
-    "05": 0.50,
-    "06": 1.00,
-    "07": 5.00,
-    "08": 10.00,
-    "09": 20.00,
-}
+DENOMINATION = json.loads("dictionaries/denomination.json")
 
-GPOLL = {
-    "00": "No activity",
-    "01": "No Response",
-    "11": "Slot door was opened",
-    "12": "Slot door was closed",
-    "13": "Drop door was opened",
-    "14": "Drop door was closed",
-    "15": "Card cage was opened",
-    "16": "Card cage was closed",
-    "17": "AC power was applied to gaming machine",
-    "18": "AC power was lost from gaming machine",
-    "19": "Cashbox door was opened",
-    "1a": "Cashbox door was closed",
-    "1b": "Cashbox was removed",
-    "1c": "Cashbox was installed",
-    "1d": "Belly door was opened",
-    "1e": "Belly door was closed",
-    "1f": "No activity and waiting for player input (obsolete)",
-    "20": """General tilt (Use this tilt when other exception tilt codes do not apply or 
-          when the tilt condition cannot be determined.)""",
-    "21": "Coin in tilt",
-    "22": "Coin out tilt",
-    "23": "Hopper empty detected",
-    "24": "Extra coin paid",
-    "25": "Diverter malfunction (controls coins to drop or hopper)",
-    "27": "Cashbox full detected",
-    "28": "Bill jam",
-    "29": "Bill acceptor hardware failure",
-    "2a": "Reverse bill detected",
-    "2b": "Bill rejected",
-    "2c": "Counterfeit bill detected",
-    "2d": "Reverse coin in detected",
-    "2e": "Cashbox near full detected",
-    "31": "CMOS RAM error (data recovered from EEPROM)",
-    "32": "CMOS RAM error (no data recovered from EEPROM)",
-    "33": "CMOS RAM error (bad device)",
-    "34": "EEPROM error (data error)",
-    "35": "EEPROM error (bad device)",
-    "36": "EPROM error (different checksum – version changed)",
-    "37": "EPROM error (bad checksum compare)",
-    "38": "Partitioned EPROM error (checksum – version changed)",
-    "39": "Partitioned EPROM error (bad checksum compare)",
-    "3a": "Memory error reset (operator used self test switch)",
-    "3b": "Low backup battery detected",
-    "3c": """Operator changed options (This is sent whenever the operator changes
-          configuration options. This includes, but is not limited to, denomination,
-          gaming machine address, or any option that affects the response to long polls
-          1F, 53, 54, 56, A0, B2, B3, B4, or B5.)""",
-    "3d": "A cash out ticket has been printed",
-    "3e": "A handpay has been validated",
-    "3f": "Validation ID not configured",
-    "40": "Reel Tilt (Which reel is not specified.)",
-    "41": "Reel 1 tilt",
-    "42": "Reel 2 tilt",
-    "43": "Reel 3 tilt",
-    "44": "Reel 4 tilt",
-    "45": "Reel 5 tilt",
-    "46": "Reel mechanism disconnected",
-    "47": "$1.00 bill accepted (non-RTE only)",
-    "48": "$5.00 bill accepted (non-RTE only)",
-    "49": "$10.00 bill accepted (non-RTE only)",
-    "4a": "$20.00 bill accepted (non-RTE only)",
-    "4b": "$50.00 bill accepted (non-RTE only)",
-    "4c": "$100.00 bill accepted (non-RTE only)",
-    "4d": "$2.00 bill accepted (non-RTE only)",
-    "4e": "$500.00 bill accepted (non-RTE only)",
-    "4f": "Bill accepted",  # Non-RTE mode: use this for all bills without explicit denomination. RTE mode: use for all bill denominations.
-    "50": "$200.00 bill accepted",  # Non-RTE only
-    "51": "Handpay is pending (Progressive, non-progressive or cancelled credits)",
-    "52": "Handpay was reset (Jackpot reset switch activated)",
-    "53": "No progressive information has been received for 5 seconds",
-    "54": "Progressive win (cashout device/credit paid)",
-    "55": "Player has cancelled the handpay request",
-    "56": "SAS progressive level hit",
-    "57": "System validation request",
-    "60": "Printer communication error",
-    "61": "Printer paper out error",
-    "66": "Cash out button pressed",
-    "67": "Ticket has been inserted",
-    "68": "Ticket transfer complete",
-    "69": "AFT transfer complete",
-    "6a": "AFT request for host cashout",
-    "6b": "AFT request for host to cash out win",
-    "6c": "AFT request to register",
-    "6d": "AFT registration acknowledged",
-    "6e": "AFT registration cancelled",
-    "6f": "Game locked",
-    "70": "Exception buffer overflow",
-    "71": "Change lamp on",
-    "72": "Change lamp off",
-    "74": "Printer paper low",
-    "75": "Printer power off",
-    "76": "Printer power on",
-    "77": "Replace printer ribbon",
-    "78": "Printer carriage jammed",
-    "79": "Coin in lockout malfunction (coin accepted while coin mech disabled)",
-    "7a": "Gaming machine soft (lifetime-to-date) meters reset to zero",
-    "7b": "Bill validator (period) totals have been reset by an attendant/operator",
-    "7c": "A legacy bonus pay awarded and/or a multiplied jackpot occurred",
-    "7e": "Game has started",
-    "7f": "Game has ended",
-    "80": "Hopper full detected",
-    "81": "Hopper level low detected",
-    "82": "Display meters or attendant menu has been entered",
-    "83": "Display meters or attendant menu has been exited",
-    "84": "Self test or operator menu has been entered",
-    "85": "Self test or operator menu has been exited",
-    "86": "Gaming machine is out of service (by attendant)",
-    "87": "Player has requested draw cards (only send when in RTE mode)",
-    "88": "Reel N has stopped (only send when in RTE mode)",
-    "89": """Coin/credit wagered (only send when in RTE mode, and only send if the
-          configured max bet is 10 or less)""",
-    "8a": "Game recall entry has been displayed",
-    "8b": "Card held/not held (only send when in RTE mode)",
-    "8c": "Game selected",
-    "8e": "Component list changed",
-    "8f": "Authentication complete",
-    "98": "Power off card cage access",
-    "99": "Power off slot door access",
-    "9a": "Power off cashbox door access",
-    "9b": "Power off drop door access",
-}
+GPOLL = json.loads("dictionaries/gpoll.json")
 
-meters = dict.fromkeys(
-    (
-        "total_cancelled_credits_meter",
-        "total_in_meter",
-        "total_out_meter",
-        "total_in_meter",
-        "total_jackpot_meter",
-        "games_played_meter",
-        "games_won_meter",
-        "games_lost_meter",
-        "games_last_power_up",
-        "games_last_slot_door_close",
-        "slot_door_opened_meter",
-        "power_reset_meter",
-        "s1_bills_accepted_meter",
-        "s5_bills_accepted_meter",
-        "s10_bills_accepted_meter",
-        "s20_bills_accepted_meter",
-        "s50_bills_accepted_meter",
-        "s100_bills_accepted_meter",
-        "s500_bills_accepted_meter",
-        "s1000_bills_accepted_meter",
-        "s200_bills_accepted_meter",
-        "s25_bills_accepted_meter",
-        "s2000_bills_accepted_meter",
-        "s2500_bills_accepted_meter",
-        "s5000_bills_accepted_meter",
-        "s10000_bills_accepted_meter",
-        "s20000_bills_accepted_meter",
-        "s25000_bills_accepted_meter",
-        "s50000_bills_accepted_meter",
-        "s100000_bills_accepted_meter",
-        "s250_bills_accepted_meter",
-        "cashout_ticket_number",
-        "cashout_amount_in_cents",
-        "ASCII_game_ID",
-        "ASCII_additional_ID",
-        "bin_denomination",
-        "bin_max_bet",
-        "bin_progressive_mode",
-        "bin_game_options",
-        "ASCII_paytable_ID",
-        "ASCII_base_percentage",
-        "bill_meter_in_dollars",
-        "ROM_signature",
-        "current_credits",
-        "bin_level",
-        "amount",
-        "partial_pay_amount",
-        "bin_reset_ID",
-        "bill_meter_in_dollars",
-        "true_coin_in",
-        "true_coin_out",
-        "current_hopper_level",
-        "credit_amount_of_all_bills_accepted",
-        "coin_amount_accepted_from_external_coin_acceptor",
-        "country_code",
-        "bill_denomination",
-        "meter_for_accepted_bills",
-        "number_bills_in_stacker",
-        "credits_SAS_in_stacker",
-        "machine_ID",
-        "sequence_number",
-        "validation_type",
-        "index_number",
-        "date_validation_operation",
-        "time_validation_operation",
-        "validation_number",
-        "ticket_amount",
-        "ticket_number",
-        "validation_system_ID",
-        "expiration_date_printed_on_ticket",
-        "pool_id",
-        "current_hopper_length",
-        "current_hopper_status",
-        "current_hopper_percent_full",
-        "current_hopper_level",
-        "bin_validation_type",
-        "total_validations",
-        "cumulative_amount",
-        "total_number_of_games_implemented",
-        "game_n_number",
-        "game_n_coin_in_meter",
-        "game_n_coin_out_meter",
-        "game_n_jackpot_meter",
-        "geme_n_games_played_meter",
-        "game_n_number_config",
-        "game_n_ASCII_game_ID",
-        "game_n_ASCII_additional_id",
-        "game_n_bin_denomination",
-        "game_n_bin_max_bet",
-        "game_n_bin_progressive_group",
-        "game_n_bin_game_options",
-        "game_n_ASCII_paytable_ID",
-        "game_n_ASCII_base_percentage",
-        "ASCII_SAS_version",
-        "ASCII_serial_number",
-        "selected_game_number",
-        "number_of_enabled_games",
-        "enabled_games_numbers",
-        "cashout_type",
-        "cashout_amount",
-        "ticket_status",
-        "ticket_amount",
-        "parsing_code",
-        "validation_data",
-        "registration_status",
-        "asset_number",
-        "registration_key",
-        "POS_ID",
-        "game_lock_status",
-        "available_transfers",
-        "host_cashout_status",
-        "AFT_status",
-        "max_buffer_index",
-        "current_cashable_amount",
-        "current_restricted_amount",
-        "current_non_restricted_amount",
-        "restricted_expiration",
-        "restricted_pool_ID",
-        "game_number",
-        "features_1",
-        "features_2",
-        "features_3",
-    ),
-    [],
-)
+meters = json.loads("dictionaries/meters.json")
 
-aft_statement = dict.fromkeys(
-    (
-        "registration_status",
-        "asset_number",
-        "registration_key",
-        "POS_ID",
-        "transaction_buffer_position",
-        "transfer_status",
-        "receipt_status",
-        "transfer_type",
-        "cashable_amount",
-        "restricted_amount",
-        "nonrestricted_amount",
-        "transfer_flags",
-        "asset_number",
-        "transaction_ID_length",
-        "transaction_ID",
-        "transaction_date",
-        "transaction_time",
-        "expiration",
-        "pool_ID",
-        "cumulative_cashable_amount_meter_size",
-        "cumulative_cashable_amount_meter",
-        "cumulative_restricted_amount_meter_size",
-        "cumulative_restricted_amount_meter",
-        "cumulative_nonrestricted_amount_meter_size",
-        "cumulative_nonrestricted_amount_meter",
-        "asset_number",
-        "game_lock_status",
-        "available_transfers",
-        "host_cashout_status",
-        "AFT_status",
-        "max_buffer_index",
-        "current_cashable_amount",
-        "current_restricted_amount",
-        "current_non_restricted_amount",
-        "restricted_expiration",
-        "restricted_pool_ID",
-    ),
-    [],
-)
+aft_statement = json.loads("dictionaries/aft_statement.json")
 
-tito_statement = dict.fromkeys(
-    (
-        "asset_number",
-        "status_bits",
-        "cashable_ticket_receipt_exp",
-        "restricted_ticket_exp",
-        "cashout_ticket_number",
-        "cashout_amount_in_cents",
-        "machine_ID",
-        "sequence_number" "cashout_type",
-        "cashout_amount",
-        "validation_type",
-        "index_number",
-        "date_validation_operation",
-        "time_validation_operation",
-        "validation_number",
-        "ticket_amount",
-        "ticket_number",
-        "validation_system_ID",
-        "expiration_date_printed_on_ticket" "pool_id",
-    ),
-    [],
-)
+tito_statement = json.loads("dictionaries/tito_statement.json")
 
-eft_statement = dict.fromkeys(
-    ("eft_status", "promo_amount", "cashable_amount", "eft_transfer_counter"), []
-)
+eft_statement = json.loads("dictionaries/eft_statement.json")
 
-game_features = dict.fromkeys(
-    (
-        "game_number",
-        "jackpot_multiplier",
-        "AFT_bonus_awards",
-        "legacy_bonus_awards",
-        "tournament",
-        "validation_extensions",
-        "validation_style",
-        "ticket_redemption",
-    ),
-    [],
-)
+game_features = json.loads("dictionaries/game_features.json")
 
-
-class BadCRC(Exception):
-    pass
-
-
-class AFTBadAmount(Exception):
-    pass
-
-
-class BadTransactionID(Exception):
-    pass
-
-
-class NoSasConnection(Exception):
-    pass
-
-
-class SASOpenError(Exception):
-    pass
-
-
-class EMGGpollBadResponse(Exception):
-    pass
-
+# Let's init the configuration file
+config_handler = ConfigHandler()
+config_handler.read_config_file()
 
 class Sas:
-    def __init__(self, port, timeout=2, log=None):
+    def __init__(self):
+        # Let's address some internal var
         self.address = None
         self.machine_n = None
         self.aft_get_last_transaction = True
-        self.denom = 0.01
-        self.asset_number = "01000000"
-        self.reg_key = "0000000000000000000000000000000000000000"
-        self.pos_id = "B374A402"
+        self.denom = config_handler.get_config_value('machine', 'denomination')
+        self.asset_number = config_handler.get_config_value('machine', 'asset_number')
+        self.reg_key = config_handler.get_config_value('machine', 'reg_key')
+        self.pos_id = config_handler.get_config_value('machine', 'pos_id')
         self.transaction = None
-        self.my_key = "44"
-        self.poll_address = 0x80
+        self.my_key = config_handler.get_config_value('security', 'key')
+        self.poll_address = config_handler.get_config_value('events', 'poll_address')
 
-        if not log:
-            self.log = log_to_stderr()
-            self.log.setLevel(logging.DEBUG)
-        else:
-            self.log = log
+        # Let's Init the Logging system
+        self.log = log_to_stderr()
+        self.log.setLevel(logging.getLevelName(config_handler.get_config_value('debug', 'level')))
 
+        # Open the serial connection
         while 1:
             try:
                 self.connection = serial.Serial(
-                    port=port, baudrate=19200, timeout=timeout
+                    port=config_handler.get_config_value('connection', 'serial_port'),
+                    baudrate=config_handler.get_config_value('connection', 'baudrate'),
+                    timeout=config_handler.get_config_value('connection', 'timeout')
                 )
                 self.close()
-                self.timeout = timeout
-                self.log.info("SAS Port OK!")
+                self.timeout = config_handler.get_config_value('connection', 'timeout')
+                self.log.info("Connection Successful")
                 break
             except:
-                self.log.critical("SAS Port error")
+                self.log.critical("Error while connecting to the machine....")
                 time.sleep(1)
 
         return
@@ -498,13 +92,13 @@ class Sas:
         self.close()
 
     def start(self):
-        self.log.info("Connecting SAS...")
+        self.log.info("Connecting to the machine...")
         while True:
             if not self.is_open():
                 try:
                     self.open()
                     if not self.is_open():
-                        self.log.error("Port not open")
+                        self.log.error("Port is NOT open")
                 except SASOpenError:
                     self.log.critical("No SAS Port")
                 except Exception as e:
@@ -521,7 +115,7 @@ class Sas:
                 if response != b"":
                     self.address = int(binascii.hexlify(response))
                     self.machine_n = response.hex()
-                    self.log.info("address recognised " + str(self.address))
+                    self.log.info("Address Recognized " + str(self.address))
                     break
                 else:
                     self.log.error("No SAS Connection")
@@ -541,7 +135,7 @@ class Sas:
 
     def _conf_event_port(self):
         self.close()
-        self.connection.timeout = EVENTS_POLL_TIMEOUT
+        self.connection.timeout = config_handler.get_config_value('events', 'poll_timeout')
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
         self.open()
@@ -621,7 +215,7 @@ class Sas:
                 try:
                     return int(binascii.hexlify(response))
                 except ValueError as e:
-                    self.log.warning("no sas response %s" % (str(buf_header[1:])))
+                    self.log.critical("no sas response %s" % (str(buf_header[1:])))
                     return None
             
             response = self._check_response(response)
@@ -634,7 +228,7 @@ class Sas:
             raise e
 
         except Exception as e:
-            self.log.info(e, exc_info=True)
+            self.log.critical(e, exc_info=True)
 
         return None
 
@@ -661,7 +255,7 @@ class Sas:
 
         raise BadCRC(binascii.hexlify(resp))
 
-    def events_poll(self, timeout=EVENTS_POLL_TIMEOUT, **kwargs):
+    def events_poll(self, **kwargs):
         self._conf_event_port()
 
         cmd = [0x80 + self.address]
@@ -1101,6 +695,13 @@ class Sas:
         return None
 
     def gaming_machine_id(self):
+        """
+        Im pretty sure that this is wrong.
+        I mean: gaming_machine_id should return something
+        and more checks should be done here.
+        As soon as i have a machine to play with i will try and update this
+        - Antonio
+        """
         # 1F
         cmd = [0x1F]
         return self._send_command(cmd, True, crc_need=False)
@@ -1441,12 +1042,10 @@ class Sas:
 
         return None
 
-    def set_secure_enhanced_validation_ID(
-        self, MachineID=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs
-    ):
+    def set_secure_enhanced_validation_id( self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs ):
         # 4C
         # FIXME: set_secure_enhanced_validation_ID
-        cmd = [0x4C, MachineID, seq_num]
+        cmd = [0x4C, machine_id, seq_num]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
             tito_statement["machine_ID"] = int(binascii.hexlify(bytearray(data[1:4])))
@@ -1618,6 +1217,11 @@ class Sas:
 
     def sas_version_gaming_machine_serial_id(self, **kwargs):
         # 54
+        """
+        This function should be checked at begin in order to address
+        the changes from sas v6.02 and 6.03
+        - Antonio
+        """
         cmd = [0x54, 0x00]
         data = self._send_command(cmd, crc_need=False, size=20)
         if data:
@@ -1644,6 +1248,10 @@ class Sas:
 
     def enabled_game_numbers(self, **kwargs):
         # 56
+        """
+        I dont get this...
+        what's the difference in the meters ?
+        """
         cmd = [0x56]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -1672,7 +1280,7 @@ class Sas:
 
     def validation_number(self, validation_id=1, valid_number=0, **kwargs):
         # 58
-        cmd = [0x58, validation_id, self.bcd_coder_array(valid_number, 8)]
+        cmd = [0x58, validation_id, self._bcd_coder_array(valid_number, 8)]
         data = self._send_command(cmd, crc_need=True)
         if data:
             return str(binascii.hexlify(bytearray(data[1])))
@@ -1682,7 +1290,7 @@ class Sas:
     def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
         # 63
         # FIXME: eft_send_promo_to_machine
-        cmd = [0x63, count, status, self.bcd_coder_array(amount, 4)]
+        cmd = [0x63, count, status, self._bcd_coder_array(amount, 4)]
         # status 0-init 1-end
         data = self._send_command(cmd, crc_need=True)
         if data:
@@ -1697,7 +1305,7 @@ class Sas:
     def eft_load_cashable_credits(self, amount=0, count=1, status=0, **kwargs):
         # 69
         # FIXME: eft_load_cashable_credits
-        cmd = [0x69, count, status, self.bcd_coder_array(amount, 4)]
+        cmd = [0x69, count, status, self._bcd_coder_array(amount, 4)]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
             meters["eft_status"] = str(binascii.hexlify(bytearray(data[1:2])))
@@ -1800,11 +1408,11 @@ class Sas:
             0x71,
             0x21,
             transfer_code,
-            self.bcd_coder_array(transfer_amount, 5),
+            self._bcd_coder_array(transfer_amount, 5),
             parsing_code,
-            self.bcd_coder_array(validation_data, 8),
-            self.bcd_coder_array(restricted_expiration, 4),
-            self.bcd_coder_array(pool_id, 2),
+            self._bcd_coder_array(validation_data, 8),
+            self._bcd_coder_array(restricted_expiration, 4),
+            self._bcd_coder_array(pool_id, 2),
         ]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
@@ -1853,7 +1461,7 @@ class Sas:
                 raise AFTBadAmount
 
         last_transaction = self.aft_format_transaction()
-        len_transaction_id = hex(len(last_transaction) / 2)[2:]
+        len_transaction_id = hex(len(last_transaction) // 2)[2:] # the division result should be converted to an integer before using hex, added extra / to solve this
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -1876,7 +1484,7 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2): # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -1912,7 +1520,7 @@ class Sas:
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])), # WARNING: technically should be (27 + 2 * a) due to an off error....
             }
         try:
             self.aft_unregister()
@@ -1922,6 +1530,14 @@ class Sas:
         return response
 
     def aft_out(self, money=None, amount=1, lock_timeout=0, **kwargs):
+        """
+        aft_out is a function to make a machine cashout (effectively removes the credit in the machine)
+        :param money:
+        :param amount:
+        :param lock_timeout:
+        :param kwargs:
+        :return:
+        """
         # self.lock_emg(lock_time=500, condition=1)
         money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
@@ -1945,7 +1561,7 @@ class Sas:
                 raise AFTBadAmount
 
         last_transaction = self.aft_format_transaction()
-        len_transaction_id = hex(len(last_transaction) / 2)[2:]
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -1968,7 +1584,7 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -2027,8 +1643,8 @@ class Sas:
             case _:
                 raise AFTBadAmount
 
-        last_transaction = self.AFT_format_transaction()
-        len_transaction_id = hex(len(last_transaction) / 2)[2:]
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -2051,7 +1667,7 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -2090,12 +1706,13 @@ class Sas:
                     "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
                 }
         except Exception as e:
-            self.log.info(e, exc_info=True)
+            self.log.critical(e, exc_info=True)
 
         self.aft_unregister()
         try:
             self.aft_clean_transaction_poll()
         except:
+            self.log.critical("Triggered unknown exception in aft_cashoud_enable")
             return False
 
         return True
@@ -2132,8 +1749,8 @@ class Sas:
             case _:
                 raise AFTBadAmount
 
-        last_transaction = self.AFT_format_transaction()
-        len_transaction_id = hex(len(last_transaction) / 2)[2:]
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -2156,7 +1773,7 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -2203,6 +1820,15 @@ class Sas:
         return response
 
     def aft_in(self, money, amount=1, lock_timeout=0, **kwargs):
+        """
+        aft_in is the function you want to use to charge money into your machine
+
+        :param money:
+        :param amount:
+        :param lock_timeout:
+        :param kwargs:
+        :return:
+        """
         money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
             return None
@@ -2220,8 +1846,8 @@ class Sas:
             case _:
                 raise AFTBadAmount
 
-        last_transaction = self.AFT_format_transaction()
-        len_transaction_id = hex(len(last_transaction) / 2)[2:]
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -2244,7 +1870,7 @@ class Sas:
 
         new_cmd = []
         count = 0
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -2292,12 +1918,12 @@ class Sas:
             self.aft_register()
 
         if not self.transaction:
-            self.aft_get_last_transaction()
+            self.aft_get_last_trx()
 
         cmd = "7202FF00"
         count = 0
         new_cmd = []
-        for i in range(len(cmd) / 2):
+        for i in range(len(cmd) // 2):
             new_cmd.append(int(cmd[count : count + 2], 16))
             count += 2
 
@@ -2380,18 +2006,18 @@ class Sas:
             transfer_code,
             transaction_index,
             transfer_type,
-            self.bcd_coder_array(cashable_amount, 5),
-            self.bcd_coder_array(restricted_amount, 5),
-            self.bcd_coder_array(non_restricted_amount, 5),
+            self._bcd_coder_array(cashable_amount, 5),
+            self._bcd_coder_array(restricted_amount, 5),
+            self._bcd_coder_array(non_restricted_amount, 5),
             transfer_flags,
             asset_number,
-            self.bcd_coder_array(registration_key, 20),
+            self._bcd_coder_array(registration_key, 20),
             len(transaction_id),
-            self.bcd_coder_array(expiration, 4),
-            self.bcd_coder_array(pool_id, 2),
+            self._bcd_coder_array(expiration, 4),
+            self._bcd_coder_array(pool_id, 2),
             len(receipt_data),
             receipt_data,
-            self.bcd_coder_array(lock_timeout, 2),
+            self._bcd_coder_array(lock_timeout, 2),
         ]
 
         data = self._send_command(cmd, crc_need=True)
@@ -2466,7 +2092,7 @@ class Sas:
 
         return None
 
-    def aft_get_last_transaction(self, **kwargs):
+    def aft_get_last_trx(self, **kwargs):
         cmd = [0x72, 0x02, 0xFF, 0x00]
         # time.sleep(SLEEP_IF_FORMAT_TRANSACTION)
         data = self._send_command(cmd, crc_need=True, size=90)
@@ -2501,13 +2127,13 @@ class Sas:
 
     def aft_format_transaction(self, from_egm=False, **kwargs):
         if from_egm:
-            self.aft_get_last_transaction()
+            self.aft_get_last_trx()
 
         self.transaction += 1
         transaction = hex(self.transaction)[2:-1]
         count = 0
         tmp = []
-        for i in range(len(transaction) / 2):
+        for i in range(len(transaction) // 2):
             tmp.append(transaction[count : count + 2])
             count += 2
 
@@ -2551,7 +2177,7 @@ class Sas:
             tmp = self.asset_number + self.reg_key + self.pos_id
             cmd[1] = 0x1D
             count = 0
-            for i in range(len(tmp) / 2):
+            for i in range(len(tmp) // 2):
                 cmd.append(int(tmp[count : count + 2], 16))
                 count += 2
 
@@ -2585,7 +2211,7 @@ class Sas:
             0x74,
             lock_code,
             transfer_condition,
-            self.bcd_coder_array(lock_timeout, 2),
+            self._bcd_coder_array(lock_timeout, 2),
         ]
 
         data = self._send_command(cmd, crc_need=True, size=40)
@@ -2686,8 +2312,8 @@ class Sas:
             0x08,
             control_mask,
             status_bits,
-            self.bcd_coder_array(cashable_ticket_receipt_exp, 2),
-            self.bcd_coder_array(restricted_ticket_exp, 2),
+            self._bcd_coder_array(cashable_ticket_receipt_exp, 2),
+            self._bcd_coder_array(restricted_ticket_exp, 2),
         ]
 
         data = self._send_command(cmd, True, crc_need=True)
@@ -2728,7 +2354,7 @@ class Sas:
         cmd = [0x7F]
         fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
         count = 0
-        for i in range(len(fmt_cmd) / 2):
+        for i in range(len(fmt_cmd) // 2):
             cmd.append(int(fmt_cmd[count : count + 2], 16))
             count += 2
 
@@ -2788,7 +2414,7 @@ class Sas:
 
         cmd = [0x8A]
         count = 0
-        for i in range(len(t_cmd) / 2):
+        for i in range(len(t_cmd) // 2):
             cmd.append(int(t_cmd[count : count + 2], 16))
             count += 2
 
@@ -2898,7 +2524,9 @@ class Sas:
     def enabled_features(self, game_number=0, **kwargs):
         # A0
         # FIXME: This makes no sense
-        cmd = [0xA0, self.bcd_coder_array(game_number, 2)]
+        # Basically tells which feature a selected games has. - Antonio
+        
+        cmd = [0xA0, self._bcd_coder_array(game_number, 2)]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
             aft_statement["game_number"] = str(binascii.hexlify(bytearray(data[1:3])))
@@ -3022,20 +2650,3 @@ class Sas:
             n = n + 1
 
         return result
-
-
-"""
-if __name__ == "__main__":
-    sas = Sas("/dev/ttyUSB0")
-    print(sas.start())
-    print(sas.sas_version_gaming_machine_serial_id())
-    #print(sas.startup())
-    #print(sas.gaming_machine_id())
-    #print(sas.selected_game_number(in_hex=False))
-    #print(sas.en_dis_game(mac_id, False))
-    # print(sas.enter_maintenance_mode())
-    # print(sas.en_dis_game(None, True))
-    # print sas.AFT_get_last_transaction()
-    # print sas.AFT_in(0.05)
-    # print sas.AFT_clean_transaction_poll()
-"""

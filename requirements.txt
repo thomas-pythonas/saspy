@@ -1,0 +1,2 @@
+pythoncrc
+pyserial
