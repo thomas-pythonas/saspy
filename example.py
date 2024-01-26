@@ -1,4 +1,5 @@
 from sas import Sas
+from crc import Crc
 from config_handler import *
 
 # Let's init the configuration file
@@ -23,3 +24,4 @@ print(sas.sas_version_gaming_machine_serial_id())
 print(sas.gaming_machine_id())
 print(sas.aft_in(15.00))
 print(sas.current_credits())
+
