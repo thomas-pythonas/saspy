@@ -39,6 +39,7 @@ connection:
 ```
 #### Connecting with RPI 4:
 
+## NOTE: To avoid frying your Pi, you are still going to need a rs-232 to TTL logic level converter. I used the [MAX3323](https://www.mouser.com/ProductDetail/Analog-Devices-Maxim-Integrated/MAX3323EEPE%2b?qs=CDqwynd4ZNoRwc1iI5RFww%3D%3D)
 #### Connecting with USB to serial adapter, use a usb rs232 cable.....I used this [one](https://www.amazon.com/USB-Serial-Adapter-Prolific-PL-2303/dp/B00GRP8EZU/ref=sr_1_1_sspa?dib=eyJ2IjoiMSJ9.eT7IwLbFTyi5P6wiZqvnXrIsQpdtfPz_M46xtQa_S1I6h-lpFonAvq5YC5xJqm4vO8e3APmv6ZveRIHnEk3JvZ7RPORl8CFQWSUM226Dz0JssJAFQzWxU_Rk-YZaVXY5yPT9ZX-bqG0CDKUEzPruTJWEFg-ITUZtUOwr8KLTrvxvVg-ounmiZNAaizmQvxjrTdVozOF4iRbI5UF54oqfyn1obbD9whyaS_eGnl-TRcU.CRPZSqj6-D9E9pUJExtcBxGZd89oO6OAewGmvDxATTU&dib_tag=se&keywords=prolific%2Busb%2Bto%2Bserial&qid=1705598420&sr=8-1-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1).
 ## Good to know
 ### Event Reporting
