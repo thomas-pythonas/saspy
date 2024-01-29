@@ -5,51 +5,35 @@ import time
 import binascii
 import logging
 import datetime
-import json
 
 from PyCRC.CRC16Kermit import CRC16Kermit
 from multiprocessing import log_to_stderr
 
+from models import *
 from error_handler import *
 
-
-AFT_LOCK_STATUS = json.loads("dictionaries/aft_lock_status.json")
-
-AFT_REGISTRATION_STATUS = json.loads("dictionaries/aft_registration_status.json")
-
-AFT_TRANSFER_STATUS = json.loads("dictionaries/aft_transfer_status.json")
-
-AFT_RECEIPT_STATUS = json.loads("dictionaries/aft_receipt_status.json")
-
-AFT_TRANSFER_TYPE = json.loads("dictionaries/aft_transfer_type.json")
-
-DENOMINATION = json.loads("dictionaries/denomination.json")
-
-GPOLL = json.loads("dictionaries/gpoll.json")
-
-meters = json.loads("dictionaries/meters.json")
-
-aft_statement = json.loads("dictionaries/aft_statement.json")
-
-tito_statement = json.loads("dictionaries/tito_statement.json")
-
-eft_statement = json.loads("dictionaries/eft_statement.json")
-
-game_features = json.loads("dictionaries/game_features.json")
+__author__ = "Zachary Tomlinson, Antonio D'Angelo"
+__credits__ = ["Thomas Pythonas", "Grigor Kolev"]
+__license__ = "MIT"
+__version__ = "2.0.0"
+__maintainer__ = "Zachary Tomlinson, Antonio D'Angelo"
+__status__ = "Staging"
 
 
 class Sas:
+    """Main SAS Library Class"""
+
     def __init__(
         self,
-        port,
-        timeout=2,
-        poll_address=0x82,
-        denom=0.01,
-        asset_number="01000000",
-        reg_key="0000000000000000000000000000000000000000",
-        pos_id="B374A402",
-        key="44",
-        debug_level="DEBUG",
+        port,  # Serial Port full Address
+        timeout=2,  # Connection timeout
+        poll_address=0x82,  # Poll Address
+        denom=0.01,  # Denomination
+        asset_number="01000000",  # Asset Number
+        reg_key="0000000000000000000000000000000000000000",  # Reg Key
+        pos_id="B374A402",  # Pos ID
+        key="44",  # Key
+        debug_level="DEBUG",  # Debug Level
     ):
         # Let's address some internal var
         self.poll_timeout = timeout
@@ -252,8 +236,8 @@ class Sas:
         crc1 = CRC16Kermit().calculate(command.decode("utf-8"))
         data = resp[1:-2]
         crc1 = hex(crc1).split("x")[-1]
-        while len(crc1) < 4:
-            crc1 = "0" + crc1
+
+        crc1 = crc1.zfill(4)
 
         crc1 = bytes(crc1, "utf-8")
 
@@ -275,7 +259,7 @@ class Sas:
             event = self.connection.read(1)
             if event == "":
                 raise NoSasConnection
-            event = GPOLL[event.hex()]
+            event = GPoll.GPoll.get_status(event.hex())
         except KeyError as e:
             raise EMGGpollBadResponse
         except Exception as e:
@@ -399,41 +383,45 @@ class Sas:
         if data:
             meters = {}
             if denom:
-                meters["total_cancelled_credits_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_cancelled_credits_meter"] = round(
                     int((binascii.hexlify(bytearray(data[1:5])))) * self.denom, 2
                 )
-                meters["total_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
                     int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
                 )
-                meters["total_out_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_out_meter"] = round(
                     int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
                 )
-                meters["total_droup_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_droup_meter"] = round(
                     int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
                 )
-                meters["total_jackpot_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
                     int(binascii.hexlify(bytearray(data[17:21]))) * self.denom, 2
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[21:25]))
                 )
             else:
-                meters["total_cancelled_credits_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_cancelled_credits_meter"] = int(
                     (binascii.hexlify(bytearray(data[1:5])))
                 )
-                meters["total_in_meter"] = int(binascii.hexlify(bytearray(data[5:9])))
-                meters["total_out_meter"] = int(binascii.hexlify(bytearray(data[9:13])))
-                meters["total_droup_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_out_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_droup_meter"] = int(
                     binascii.hexlify(bytearray(data[13:17]))
                 )
-                meters["total_jackpot_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
                     binascii.hexlify(bytearray(data[17:21]))
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[21:25]))
                 )
 
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -544,12 +532,13 @@ class Sas:
         cmd = [0x18]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
-            meters = {}
-            meters["games_last_power_up"] = int(binascii.hexlify(bytearray(data[1:3])))
-            meters["games_last_slot_door_close"] = int(
+            Meters.Meters.STATUS_MAP["games_last_power_up"] = int(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            Meters.Meters.STATUS_MAP["games_last_slot_door_close"] = int(
                 binascii.hexlify(bytearray(data[1:5]))
             )
-            return data
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -558,34 +547,39 @@ class Sas:
         cmd = [0x19]
         data = self._send_command(cmd, crc_need=False, size=24)
         if data:
-            meters = {}
             if not denom:
-                meters["total_bet_meter"] = int(binascii.hexlify(bytearray(data[1:5])))
-                meters["total_win_meter"] = int(binascii.hexlify(bytearray(data[5:9])))
-                meters["total_in_meter"] = int(binascii.hexlify(bytearray(data[9:13])))
-                meters["total_jackpot_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = int(
+                    binascii.hexlify(bytearray(data[1:5]))
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
                     binascii.hexlify(bytearray(data[13:17]))
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[17:21]))
                 )
             else:
-                meters["total_bet_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
-                meters["total_win_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_win_meter"] = round(
                     int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
                 )
-                meters["total_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
                     int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
                 )
-                meters["total_jackpot_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
                     int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[17:21]))
                 )
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -608,14 +602,19 @@ class Sas:
         cmd = [0x1B]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            meters = {}
-            meters["bin_progressive_group"] = int(
+            Meters.Meters.STATUS_MAP["bin_progressive_group"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
-            meters["bin_level"] = int(binascii.hexlify(bytearray(data[2:3])))
-            meters["amount"] = int(binascii.hexlify(bytearray(data[3:8])))
-            meters["bin_reset_ID"] = int(binascii.hexlify(bytearray(data[8:])))
-            return meters
+            Meters.Meters.STATUS_MAP["bin_level"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["amount"] = int(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["bin_reset_ID"] = int(
+                binascii.hexlify(bytearray(data[8:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -624,53 +623,58 @@ class Sas:
         cmd = [0x1C]
         data = self._send_command(cmd, crc_need=False, size=36)
         if data:
-            meters = {}
             if not denom:
-                meters["total_bet_meter"] = int(binascii.hexlify(bytearray(data[1:5])))
-                meters["total_win_meter"] = int(binascii.hexlify(bytearray(data[5:9])))
-                meters["total_in_meter"] = int(binascii.hexlify(bytearray(data[9:13])))
-                meters["total_jackpot_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = int(
+                    binascii.hexlify(bytearray(data[1:5]))
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
                     binascii.hexlify(bytearray(data[13:17]))
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[17:21]))
                 )
-                meters["games_won_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_won_meter"] = int(
                     binascii.hexlify(bytearray(data[21:25]))
                 )
-                meters["slot_door_opened_meter"] = int(
+                Meters.Meters.STATUS_MAP["slot_door_opened_meter"] = int(
                     binascii.hexlify(bytearray(data[25:29]))
                 )
-                meters["power_reset_meter"] = int(
+                Meters.Meters.STATUS_MAP["power_reset_meter"] = int(
                     binascii.hexlify(bytearray(data[29:33]))
                 )
             else:
-                meters["total_bet_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = round(
                     int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
                 )
-                meters["total_win_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_win_meter"] = round(
                     int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
                 )
-                meters["total_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
                     int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
                 )
-                meters["total_jackpot_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
                     int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
                 )
-                meters["games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[17:21]))
                 )
-                meters["games_won_meter"] = round(
+                Meters.Meters.STATUS_MAP["games_won_meter"] = round(
                     int(binascii.hexlify(bytearray(data[21:25]))) * self.denom, 2
                 )
-                meters["slot_door_opened_meter"] = int(
+                Meters.Meters.STATUS_MAP["slot_door_opened_meter"] = int(
                     binascii.hexlify(bytearray(data[25:29]))
                 )
-                meters["power_reset_meter"] = int(
+                Meters.Meters.STATUS_MAP["power_reset_meter"] = int(
                     binascii.hexlify(bytearray(data[29:33]))
                 )
 
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -679,41 +683,53 @@ class Sas:
         cmd = [0x1E]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
-            meters = {}
-            meters["s1_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s1_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[1:5]))
             )
-            meters["s5_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s5_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[5:9]))
             )
-            meters["s10_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s10_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[9:13]))
             )
-            meters["s20_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s20_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[13:17]))
             )
-            meters["s50_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s50_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[17:21]))
             )
-            meters["s100_bills_accepted_meter"] = int(
+            Meters.Meters.STATUS_MAP["s100_bills_accepted_meter"] = int(
                 binascii.hexlify(bytearray(data[21:25]))
             )
 
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
     def gaming_machine_id(self):
         """
-        Im pretty sure that this is wrong.
-        I mean: gaming_machine_id should return something
-        and more checks should be done here.
-        As soon as i have a machine to play with i will try and update this
-        - Antonio
+        @todo Check this one...something smell bad
+        :return:
         """
         # 1F
         cmd = [0x1F]
-        return self._send_command(cmd, True, crc_need=False)
+        data = self._send_command(cmd, crc_need=False, size=24)
+        if data is not None:
+            denom = Denomination.Denomination.get_status(data[6:7].hex())
+            self.log.info("Recognized " + str(denom))
+            self.denom = denom
+            return denom
+            # meters['ASCII_game_ID']=(((data[1:3])))
+            # meters['ASCII_additional_ID']=(((data[3:6])))
+            # meters['bin_denomination']=int(self.hexlify(self.bytearray(data[4:5])))
+            # meters['bin_max_bet']=(self.hexlify(self.bytearray(data[7:8])))
+            # meters['bin_progressive_mode']=int(self.hexlify(self.bytearray(data[8:9])))
+            # meters['bin_game_options']=(self.hexlify(self.bytearray(data[9:11])))
+            # meters['ASCII_paytable_ID']=(((data[11:17])))
+            # meters['ASCII_base_percentage']=(((data[17:21])))
+
+            # return data
+        return None
 
     def total_dollar_value_of_bills_meter(self, **kwargs):
         # 20
@@ -795,7 +811,7 @@ class Sas:
         delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
         cmd = [0x2E]
         count = 0
-        for i in range(len(delay_fmt) / 2):
+        for i in range(len(delay_fmt) // 2):
             cmd.append(int(delay_fmt[count : count + 2], 16))
             count += 2
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -1023,13 +1039,16 @@ class Sas:
         cmd = [0x48]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            meters = {}
-            meters["country_code"] = int(binascii.hexlify(bytearray(data[1:2])))
-            meters["bill_denomination"] = int(binascii.hexlify(bytearray(data[2:3])))
-            meters["meter_for_accepted_bills"] = int(
+            Meters.Meters.STATUS_MAP["country_code"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            Meters.Meters.STATUS_MAP["bill_denomination"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["meter_for_accepted_bills"] = int(
                 binascii.hexlify(bytearray(data[3:6]))
             )
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1054,13 +1073,27 @@ class Sas:
     def set_secure_enhanced_validation_id(
         self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs
     ):
+        """
+        For a gaming machine to perform secure enhanced ticket/receipt/handpay validation, the host must use
+        the type S long poll. The host may also use this long poll to retrieve the current gaming
+        machine validation ID and validation sequence number by issuing the 4C command with a gaming
+        machine validation ID of zero. If a gaming machine is not configured to perform secure enhanced
+        validation, or is responding to a host that is not the validation controller, it ignores this long poll
+
+        :param machine_id:
+        :param seq_num:
+        :param kwargs:
+        :return:
+        """
         # 4C
         # FIXME: set_secure_enhanced_validation_ID
         cmd = [0x4C, machine_id, seq_num]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            tito_statement["machine_ID"] = int(binascii.hexlify(bytearray(data[1:4])))
-            tito_statement["sequence_number"] = int(
+            TitoStatement.Tito.STATUS_MAP["machine_ID"] = int(
+                binascii.hexlify(bytearray(data[1:4]))
+            )
+            TitoStatement.Tito.STATUS_MAP["sequence_number"] = int(
                 binascii.hexlify(bytearray(data[4:8]))
             )
             return data
@@ -1073,34 +1106,38 @@ class Sas:
         cmd = [0x4D, curr_validation_info]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            tito_statement["validation_type"] = int(
+            TitoStatement.Tito.STATUS_MAP["validation_type"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
-            tito_statement["index_number"] = int(binascii.hexlify(bytearray(data[2:3])))
-            tito_statement["date_validation_operation"] = str(
+            TitoStatement.Tito.STATUS_MAP["index_number"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            TitoStatement.Tito.STATUS_MAP["date_validation_operation"] = str(
                 binascii.hexlify(bytearray(data[3:7]))
             )
-            tito_statement["time_validation_operation"] = str(
+            TitoStatement.Tito.STATUS_MAP["time_validation_operation"] = str(
                 binascii.hexlify(bytearray(data[7:10]))
             )
-            tito_statement["validation_number"] = str(
+            TitoStatement.Tito.STATUS_MAP["validation_number"] = str(
                 binascii.hexlify(bytearray(data[10:18]))
             )
-            tito_statement["ticket_amount"] = int(
+            TitoStatement.Tito.STATUS_MAP["ticket_amount"] = int(
                 binascii.hexlify(bytearray(data[18:23]))
             )
-            tito_statement["ticket_number"] = int(
+            TitoStatement.Tito.STATUS_MAP["ticket_number"] = int(
                 binascii.hexlify(bytearray(data[23:25]))
             )
-            tito_statement["validation_system_ID"] = int(
+            TitoStatement.Tito.STATUS_MAP["validation_system_ID"] = int(
                 binascii.hexlify(bytearray(data[25:26]))
             )
-            tito_statement["expiration_date_printed_on_ticket"] = str(
+            TitoStatement.Tito.STATUS_MAP["expiration_date_printed_on_ticket"] = str(
                 binascii.hexlify(bytearray(data[26:30]))
             )
-            tito_statement["pool_id"] = int(binascii.hexlify(bytearray(data[30:32])))
+            TitoStatement.Tito.STATUS_MAP["pool_id"] = int(
+                binascii.hexlify(bytearray(data[30:32]))
+            )
 
-            return data
+            return TitoStatement.Tito.get_non_empty_status_map()
 
         return None
 
@@ -1110,17 +1147,19 @@ class Sas:
         cmd = [0x4F]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
-            meters["current_hopper_lenght"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_lenght"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
-            meters["current_hopper_ststus"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_ststus"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
-            meters["current_hopper_percent_full"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_percent_full"] = int(
                 binascii.hexlify(bytearray(data[3:4]))
             )
-            meters["current_hopper_level"] = int(binascii.hexlify(bytearray(data[4:])))
-            return data
+            Meters.Meters.STATUS_MAP["current_hopper_level"] = int(
+                binascii.hexlify(bytearray(data[4:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1130,10 +1169,16 @@ class Sas:
         cmd = [0x50, type_of_validation]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            meters["bin_validation_type"] = int(binascii.hexlify(bytearray(data[1])))
-            meters["total_validations"] = int(binascii.hexlify(bytearray(data[2:6])))
-            meters["cumulative_amount"] = str(binascii.hexlify(bytearray(data[6:])))
-            return data
+            Meters.Meters.STATUS_MAP["bin_validation_type"] = int(
+                binascii.hexlify(bytearray(data[1]))
+            )
+            Meters.Meters.STATUS_MAP["total_validations"] = int(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            Meters.Meters.STATUS_MAP["cumulative_amount"] = str(
+                binascii.hexlify(bytearray(data[6:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1159,35 +1204,39 @@ class Sas:
         if data:
             meters = {}
             if not denom:
-                meters["game_n_number"] = str(binascii.hexlify(bytearray(data[1:3])))
-                meters["game_n_coin_in_meter"] = int(
+                Meters.Meters.STATUS_MAP["game_n_number"] = str(
+                    binascii.hexlify(bytearray(data[1:3]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_in_meter"] = int(
                     binascii.hexlify(bytearray(data[3:7]))
                 )
-                meters["game_n_coin_out_meter"] = int(
+                Meters.Meters.STATUS_MAP["game_n_coin_out_meter"] = int(
                     binascii.hexlify(bytearray(data[7:11]))
                 )
-                meters["game_n_jackpot_meter"] = int(
+                Meters.Meters.STATUS_MAP["game_n_jackpot_meter"] = int(
                     binascii.hexlify(bytearray(data[11:15]))
                 )
-                meters["geme_n_games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["geme_n_games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[15:]))
                 )
             else:
-                meters["game_n_number"] = str(binascii.hexlify(bytearray(data[1:3])))
-                meters["game_n_coin_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["game_n_number"] = str(
+                    binascii.hexlify(bytearray(data[1:3]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_in_meter"] = round(
                     int(binascii.hexlify(bytearray(data[3:7]))) * self.denom, 2
                 )
-                meters["game_n_coin_out_meter"] = round(
+                Meters.Meters.STATUS_MAP["game_n_coin_out_meter"] = round(
                     int(binascii.hexlify(bytearray(data[7:11]))) * self.denom, 2
                 )
-                meters["game_n_jackpot_meter"] = round(
+                Meters.Meters.STATUS_MAP["game_n_jackpot_meter"] = round(
                     int(binascii.hexlify(bytearray(data[11:15]))) * self.denom, 2
                 )
-                meters["geme_n_games_played_meter"] = int(
+                Meters.Meters.STATUS_MAP["geme_n_games_played_meter"] = int(
                     binascii.hexlify(bytearray(data[15:]))
                 )
 
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1202,27 +1251,31 @@ class Sas:
 
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            meters["game_n_number_config"] = int(binascii.hexlify(bytearray(data[1:3])))
-            meters["game_n_ASCII_game_ID"] = str(binascii.hexlify(bytearray(data[3:5])))
-            meters["game_n_ASCII_additional_id"] = str(
+            Meters.Meters.STATUS_MAP["game_n_number_config"] = int(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_game_ID"] = str(
+                binascii.hexlify(bytearray(data[3:5]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_additional_id"] = str(
                 binascii.hexlify(bytearray(data[5:7]))
             )
-            meters["game_n_bin_denomination"] = str(
+            Meters.Meters.STATUS_MAP["game_n_bin_denomination"] = str(
                 binascii.hexlify(bytearray(data[7]))
             )
-            meters["game_n_bin_progressive_group"] = str(
+            Meters.Meters.STATUS_MAP["game_n_bin_progressive_group"] = str(
                 binascii.hexlify(bytearray(data[8]))
             )
-            meters["game_n_bin_game_options"] = str(
+            Meters.Meters.STATUS_MAP["game_n_bin_game_options"] = str(
                 binascii.hexlify(bytearray(data[9:11]))
             )
-            meters["game_n_ASCII_paytable_ID"] = str(
+            Meters.Meters.STATUS_MAP["game_n_ASCII_paytable_ID"] = str(
                 binascii.hexlify(bytearray(data[11:17]))
             )
-            meters["game_n_ASCII_base_percentage"] = str(
+            Meters.Meters.STATUS_MAP["game_n_ASCII_base_percentage"] = str(
                 binascii.hexlify(bytearray(data[17:]))
             )
-            return data
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1236,12 +1289,11 @@ class Sas:
         cmd = [0x54, 0x00]
         data = self._send_command(cmd, crc_need=False, size=20)
         if data:
-            meters = {}
-            meters["ASCII_SAS_version"] = (
+            Meters.Meters.STATUS_MAP["ASCII_SAS_version"] = (
                 int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
             )
-            meters["ASCII_serial_number"] = str(bytearray(data[5:]))
-            return meters
+            Meters.Meters.STATUS_MAP["ASCII_serial_number"] = str(bytearray(data[5:]))
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1259,19 +1311,16 @@ class Sas:
 
     def enabled_game_numbers(self, **kwargs):
         # 56
-        """
-        I dont get this...
-        what's the difference in the meters ?
-        """
         cmd = [0x56]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            meters = {}
-            meters["number_of_enabled_games"] = int(
+            Meters.Meters.STATUS_MAP["number_of_enabled_games"] = int(
                 binascii.hexlify(bytearray(data[2]))
             )
-            meters["enabled_games_numbers"] = int(binascii.hexlify(bytearray(data[3:])))
-            return meters
+            Meters.Meters.STATUS_MAP["enabled_games_numbers"] = int(
+                binascii.hexlify(bytearray(data[3:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1280,12 +1329,13 @@ class Sas:
         cmd = [0x57]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            tito_statement = {}
-            tito_statement["cashout_type"] = int(binascii.hexlify(bytearray(data[1:2])))
-            tito_statement["cashout_amount"] = str(
+            TitoStatement.Tito.STATUS_MAP["cashout_type"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            TitoStatement.Tito.STATUS_MAP["cashout_amount"] = str(
                 binascii.hexlify(bytearray(data[2:]))
             )
-            return tito_statement
+            return TitoStatement.Tito.get_non_empty_status_map()
 
         return None
 
@@ -1395,11 +1445,19 @@ class Sas:
         cmd = [0x70]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
-            meters["ticket_status"] = int(binascii.hexlify(bytearray(data[2:3])))
-            meters["ticket_amount"] = str(binascii.hexlify(bytearray(data[3:8])))
-            meters["parsing_code"] = int(binascii.hexlify(bytearray(data[8:9])))
-            meters["validation_data"] = str(binascii.hexlify(bytearray(data[9:])))
-            return data[1]
+            Meters.Meters.STATUS_MAP["ticket_status"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["ticket_amount"] = str(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["parsing_code"] = int(
+                binascii.hexlify(bytearray(data[8:9]))
+            )
+            Meters.Meters.STATUS_MAP["validation_data"] = str(
+                binascii.hexlify(bytearray(data[9:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1427,11 +1485,19 @@ class Sas:
         ]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            meters["ticket_status"] = int(binascii.hexlify(bytearray(data[2:3])))
-            meters["ticket_amount"] = int(binascii.hexlify(bytearray(data[3:8])))
-            meters["parsing_code"] = int(binascii.hexlify(bytearray(data[8:9])))
-            meters["validation_data"] = str(binascii.hexlify(bytearray(data[9:])))
-            return data[1]
+            Meters.Meters.STATUS_MAP["ticket_status"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["ticket_amount"] = int(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["parsing_code"] = int(
+                binascii.hexlify(bytearray(data[8:9]))
+            )
+            Meters.Meters.STATUS_MAP["validation_data"] = str(
+                binascii.hexlify(bytearray(data[9:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -1729,7 +1795,7 @@ class Sas:
         try:
             self.aft_clean_transaction_poll()
         except:
-            self.log.critical("Triggered unknown exception in aft_cashoud_enable")
+            self.log.critical("Triggered unknown exception in aft_cashout_enable")
             return False
 
         return True
@@ -1931,6 +1997,11 @@ class Sas:
             self.log.error(e, exc_info=True)
 
     def aft_clean_transaction_poll(self, register=False, **kwargs):
+        """Remember to loop this function AFTER calling aft_in.
+        If it raises an error or returns 'Transfer pending (not complete)'
+        you continue to execute until 'Full transfer successful'.
+        Otherwise, you break the cycle and make the request invalid.
+        """
         if register:
             self.aft_register()
 
@@ -2039,79 +2110,82 @@ class Sas:
 
         data = self._send_command(cmd, crc_need=True)
         if data:
-            aft_statement["transaction_buffer_position"] = int(
+            AftStatements.AftStatements.STATUS_MAP["transaction_buffer_position"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
-            aft_statement["transfer_status"] = int(
+            AftStatements.AftStatements.STATUS_MAP["transfer_status"] = int(
                 binascii.hexlify(bytearray(data[3:4]))
             )
-            aft_statement["receipt_status"] = int(
+            AftStatements.AftStatements.STATUS_MAP["receipt_status"] = int(
                 binascii.hexlify(bytearray(data[4:5]))
             )
-            aft_statement["transfer_type"] = int(binascii.hexlify(bytearray(data[5:6])))
-            aft_statement["cashable_amount"] = int(
+            AftStatements.AftStatements.STATUS_MAP["transfer_type"] = int(
+                binascii.hexlify(bytearray(data[5:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["cashable_amount"] = int(
                 binascii.hexlify(bytearray(data[6:11]))
             )
-            aft_statement["restricted_amount"] = int(
+            AftStatements.AftStatements.STATUS_MAP["restricted_amount"] = int(
                 binascii.hexlify(bytearray(data[11:16]))
             )
-            aft_statement["nonrestricted_amount"] = int(
+            AftStatements.AftStatements.STATUS_MAP["nonrestricted_amount"] = int(
                 binascii.hexlify(bytearray(data[16:21]))
             )
-            aft_statement["transfer_flags"] = int(
+            AftStatements.AftStatements.STATUS_MAP["transfer_flags"] = int(
                 binascii.hexlify(bytearray(data[21:22]))
             )
-            aft_statement["asset_number"] = binascii.hexlify(bytearray(data[22:26]))
-            aft_statement["transaction_id_length"] = int(
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = binascii.hexlify(
+                bytearray(data[22:26])
+            )
+            AftStatements.AftStatements.STATUS_MAP["transaction_id_length"] = int(
                 binascii.hexlify(bytearray(data[26:27]))
             )
             a = int(binascii.hexlify(bytearray(data[26:27])))
-            aft_statement["transaction_id"] = str(
+            AftStatements.AftStatements.STATUS_MAP["transaction_id"] = str(
                 binascii.hexlify(bytearray(data[27 : (27 + a + 1)]))
             )
             a = 27 + a + 1
-            aft_statement["transaction_date"] = str(
+            AftStatements.AftStatements.STATUS_MAP["transaction_date"] = str(
                 binascii.hexlify(bytearray(data[a : a + 5]))
             )
             a = a + 5
-            aft_statement["transaction_time"] = str(
+            AftStatements.AftStatements.STATUS_MAP["transaction_time"] = str(
                 binascii.hexlify(bytearray(data[a : a + 4]))
             )
-            aft_statement["expiration"] = str(
+            AftStatements.AftStatements.STATUS_MAP["expiration"] = str(
                 binascii.hexlify(bytearray(data[a + 4 : a + 9]))
             )
-            aft_statement["pool_id"] = str(
+            AftStatements.AftStatements.STATUS_MAP["pool_id"] = str(
                 binascii.hexlify(bytearray(data[a + 9 : a + 11]))
             )
-            aft_statement["cumulative_cashable_amount_meter_size"] = binascii.hexlify(
-                bytearray(data[a + 11 : a + 12])
-            )
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_cashable_amount_meter_size"
+            ] = binascii.hexlify(bytearray(data[a + 11 : a + 12]))
             b = a + int(binascii.hexlify(bytearray(data[a + 11 : a + 12])))
-            aft_statement["cumulative_cashable_amount_meter"] = binascii.hexlify(
-                bytearray(data[a + 12 : b + 1])
-            )
-            aft_statement["cumulative_restricted_amount_meter_size"] = binascii.hexlify(
-                bytearray(data[b + 1 : b + 2])
-            )
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_cashable_amount_meter"
+            ] = binascii.hexlify(bytearray(data[a + 12 : b + 1]))
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_restricted_amount_meter_size"
+            ] = binascii.hexlify(bytearray(data[b + 1 : b + 2]))
             c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1 : b + 2])))
-            aft_statement["cumulative_restricted_amount_meter"] = binascii.hexlify(
-                bytearray(data[b + 2 : c])
-            )
-            aft_statement[
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_restricted_amount_meter"
+            ] = binascii.hexlify(bytearray(data[b + 2 : c]))
+            AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_nonrestricted_amount_meter_size"
             ] = binascii.hexlify(bytearray(data[c : c + 1]))
             b = int(binascii.hexlify(bytearray(data[c : c + 1]))) + c
-            aft_statement["cumulative_nonrestricted_amount_meter"] = binascii.hexlify(
-                bytearray(data[c + 1 :])
-            )
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_nonrestricted_amount_meter"
+            ] = binascii.hexlify(bytearray(data[c + 1 :]))
 
-            return data[1]
+            return AftStatements.AftStatements.get_non_empty_status_map()
 
         return None
 
     def aft_get_last_trx(self, **kwargs):
         cmd = [0x72, 0x02, 0xFF, 0x00]
-        # time.sleep(SLEEP_IF_FORMAT_TRANSACTION)
         data = self._send_command(cmd, crc_need=True, size=90)
         if data:
             try:
@@ -2204,14 +2278,19 @@ class Sas:
         data = self._send_command(cmd, crc_need=True, size=34)
 
         if data:
-            aft_statement = {}
-            aft_statement["registration_status"] = AFT_REGISTRATION_STATUS[
-                str(binascii.hexlify((data[2:3])))
-            ]
-            aft_statement["asset_number"] = str(binascii.hexlify(data[3:7]))
-            aft_statement["registration_key"] = str(binascii.hexlify(data[7:27]))
-            aft_statement["POS_ID"] = str(binascii.hexlify((data[27:])))
-            return aft_statement
+            AftStatements.AftStatements.STATUS_MAP[
+                "registration_status"
+            ] = AFT_REGISTRATION_STATUS[str(binascii.hexlify((data[2:3])))]
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
+                binascii.hexlify(data[3:7])
+            )
+            AftStatements.AftStatements.STATUS_MAP["registration_key"] = str(
+                binascii.hexlify(data[7:27])
+            )
+            AftStatements.AftStatements.STATUS_MAP["POS_ID"] = str(
+                binascii.hexlify((data[27:]))
+            )
+            return AftStatements.AftStatements.get_non_empty_status_map()
 
         return None
 
@@ -2236,38 +2315,41 @@ class Sas:
 
         data = self._send_command(cmd, crc_need=True, size=40)
         if data:
-            aft_statement = {}
-            aft_statement["asset_number"] = str(binascii.hexlify(bytearray(data[2:6])))
-            aft_statement["game_lock_status"] = str(
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["game_lock_status"] = str(
                 binascii.hexlify(bytearray(data[6:7]))
             )
-            aft_statement["avilable_transfers"] = str(
+            AftStatements.AftStatements.STATUS_MAP["avilable_transfers"] = str(
                 binascii.hexlify(bytearray(data[7:8]))
             )
-            aft_statement["host_cashout_status"] = str(
+            AftStatements.AftStatements.STATUS_MAP["host_cashout_status"] = str(
                 binascii.hexlify(bytearray(data[8:9]))
             )
-            aft_statement["AFT_status"] = str(binascii.hexlify(bytearray(data[9:10])))
-            aft_statement["max_buffer_index"] = str(
+            AftStatements.AftStatements.STATUS_MAP["AFT_status"] = str(
+                binascii.hexlify(bytearray(data[9:10]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["max_buffer_index"] = str(
                 binascii.hexlify(bytearray(data[10:11]))
             )
-            aft_statement["current_cashable_amount"] = str(
+            AftStatements.AftStatements.STATUS_MAP["current_cashable_amount"] = str(
                 binascii.hexlify(bytearray(data[11:16]))
             )
-            aft_statement["current_restricted_amount"] = str(
+            AftStatements.AftStatements.STATUS_MAP["current_restricted_amount"] = str(
                 binascii.hexlify(bytearray(data[16:21]))
             )
-            aft_statement["current_non_restricted_amount"] = str(
-                binascii.hexlify(bytearray(data[21:26]))
-            )
-            aft_statement["restricted_expiration"] = str(
+            AftStatements.AftStatements.STATUS_MAP[
+                "current_non_restricted_amount"
+            ] = str(binascii.hexlify(bytearray(data[21:26])))
+            AftStatements.AftStatements.STATUS_MAP["restricted_expiration"] = str(
                 binascii.hexlify(bytearray(data[26:29]))
             )
-            aft_statement["restricted_pool_ID"] = str(
+            AftStatements.AftStatements.STATUS_MAP["restricted_pool_ID"] = str(
                 binascii.hexlify(bytearray(data[29:31]))
             )
 
-            return aft_statement
+            return AftStatements.AftStatements.get_non_empty_status_map()
 
         return None
 
@@ -2338,16 +2420,20 @@ class Sas:
 
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            aft_statement["asset_number"] = str(binascii.hexlify(bytearray(data[2:6])))
-            aft_statement["status_bits"] = str(binascii.hexlify(bytearray(data[6:8])))
-            aft_statement["cashable_ticket_receipt_exp"] = str(
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["status_bits"] = str(
+                binascii.hexlify(bytearray(data[6:8]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["cashable_ticket_receipt_exp"] = str(
                 binascii.hexlify(bytearray(data[8:10]))
             )
-            aft_statement["restricted_ticket_exp"] = str(
+            AftStatements.AftStatements.STATUS_MAP["restricted_ticket_exp"] = str(
                 binascii.hexlify(bytearray(data[10:]))
             )
 
-            return data[1]
+            return AftStatements.AftStatements.get_non_empty_status_map()
 
         return None
 
@@ -2506,24 +2592,33 @@ class Sas:
         cmd = [0x9A, ((n >> 8) & 0xFF), (n & 0xFF)]
         data = self._send_command(cmd, crc_need=True, size=18)
         if data:
-            meters = {}
             if not denom:
-                meters["game number"] = int(binascii.hexlify(bytearray(data[2:3])))
-                meters["deductible"] = int(binascii.hexlify(bytearray(data[3:7])))
-                meters["non-deductible"] = int(binascii.hexlify(bytearray(data[7:11])))
-                meters["wager match"] = int(binascii.hexlify(bytearray(data[11:15])))
+                Meters.Meters.STATUS_MAP["game number"] = int(
+                    binascii.hexlify(bytearray(data[2:3]))
+                )
+                Meters.Meters.STATUS_MAP["deductible"] = int(
+                    binascii.hexlify(bytearray(data[3:7]))
+                )
+                Meters.Meters.STATUS_MAP["non-deductible"] = int(
+                    binascii.hexlify(bytearray(data[7:11]))
+                )
+                Meters.Meters.STATUS_MAP["wager match"] = int(
+                    binascii.hexlify(bytearray(data[11:15]))
+                )
             else:
-                meters["game number"] = int(binascii.hexlify(bytearray(data[2:3])))
-                meters["deductible"] = round(
+                Meters.Meters.STATUS_MAP["game number"] = int(
+                    binascii.hexlify(bytearray(data[2:3]))
+                )
+                Meters.Meters.STATUS_MAP["deductible"] = round(
                     int(binascii.hexlify(bytearray(data[3:7]))) * self.denom, 2
                 )
-                meters["non-deductible"] = round(
+                Meters.Meters.STATUS_MAP["non-deductible"] = round(
                     int(binascii.hexlify(bytearray(data[7:11]))) * self.denom, 2
                 )
-                meters["wager match"] = round(
+                Meters.Meters.STATUS_MAP["wager match"] = round(
                     int(binascii.hexlify(bytearray(data[11:15]))) * self.denom, 2
                 )
-            return meters
+            return Meters.Meters.get_non_empty_status_map()
 
         return None
 
@@ -2549,44 +2644,50 @@ class Sas:
         cmd = [0xA0, self._bcd_coder_array(game_number, 2)]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            aft_statement["game_number"] = str(binascii.hexlify(bytearray(data[1:3])))
-            aft_statement["features_1"] = data[3]
-            aft_statement["features_2"] = data[4]
-            aft_statement["features_3"] = data[5]
-            game_features["game_number"] = aft_statement.get("game_number")
+            AftStatements.AftStatements.STATUS_MAP["game_number"] = str(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["features_1"] = data[3]
+            AftStatements.AftStatements.STATUS_MAP["features_2"] = data[4]
+            AftStatements.AftStatements.STATUS_MAP["features_3"] = data[5]
+            GameFeatures.GameFeatures.STATUS_MAP[
+                "game_number"
+            ] = AftStatements.AftStatements.get_status("game_number")
             if data[3] & 0b00000001:
-                game_features["jackpot_multiplier"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["jackpot_multiplier"] = 1
             else:
-                game_features["jackpot_multiplier"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["jackpot_multiplier"] = 0
 
             if data[3] & 0b00000010:
-                game_features["AFT_bonus_awards"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["AFT_bonus_awards"] = 1
             else:
-                game_features["AFT_bonus_awards"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["AFT_bonus_awards"] = 0
 
             if data[3] & 0b00000100:
-                game_features["legacy_bonus_awards"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["legacy_bonus_awards"] = 1
             else:
-                game_features["legacy_bonus_awards"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["legacy_bonus_awards"] = 0
 
             if data[3] & 0b00001000:
-                game_features["tournament"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["tournament"] = 1
             else:
-                game_features["tournament"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["tournament"] = 0
 
             if data[3] & 0b00010000:
-                game_features["validation_extensions"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 1
             else:
-                game_features["validation_extensions"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 0
 
-            game_features["validation_style"] = data[3] & 0b01100000 >> 5
+            GameFeatures.GameFeatures.STATUS_MAP["validation_style"] = (
+                data[3] & 0b01100000 >> 5
+            )
 
             if data[3] & 0b10000000:
-                game_features["ticket_redemption"] = 1
+                GameFeatures.GameFeatures.STATUS_MAP["ticket_redemption"] = 1
             else:
-                game_features["ticket_redemption"] = 0
+                GameFeatures.GameFeatures.STATUS_MAP["ticket_redemption"] = 0
 
-            return data[1]
+            return GameFeatures.GameFeatures.get_non_empty_status_map()
 
         return None
 

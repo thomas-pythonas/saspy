@@ -1,121 +1,142 @@
-from dataclasses import dataclass
-
-
-@dataclass
 class Meters:
-    total_cancelled_credits: str
-    total_in: str
-    total_out: str
-    total_jackpot: str
-    games_played: str
-    games_won: str
-    games_lost: str
-    games_last_power_up: str
-    games_last_slot_door_close: str
-    slot_door_opened: str
-    power_reset: str
-    s1_bills_accepted: str
-    s5_bills_accepted: str
-    s10_bills_accepted: str
-    s20_bills_accepted: str
-    s50_bills_accepted: str
-    s100_bills_accepted: str
-    s500_bills_accepted: str
-    s1000_bills_accepted: str
-    s200_bills_accepted: str
-    s25_bills_accepted: str
-    s2000_bills_accepted: str
-    s2500_bills_accepted: str
-    s5000_bills_accepted: str
-    s10000_bills_accepted: str
-    s20000_bills_accepted: str
-    s25000_bills_accepted: str
-    s50000_bills_accepted: str
-    s100000_bills_accepted: str
-    s250_bills_accepted: str
-    cashout_ticket_number: str
-    cashout_amount_in_cents: str
-    ascii_game_id: str
-    ascii_additional_id: str
-    bin_denomination: str
-    bin_max_bet: str
-    bin_progressive_mode: str
-    bin_game_options: str
-    ascii_paytable_id: str
-    ascii_base_percentage: str
-    bill_in_dollars: str
-    ROM_signature: str
-    current_credits: str
-    bin_level: str
-    amount: str
-    partial_pay_amount: str
-    bin_reset_id: str
-    true_coin_in: str
-    true_coin_out: str
-    current_hopper_level: str
-    credit_amount_of_all_bills_accepted: str
-    coin_amount_accepted_from_external_coin_acceptor: str
-    country_code: str
-    bill_denomination: str
-    meter_for_accepted_bills: str
-    number_bills_in_stacker: str
-    credits_sas_in_stacker: str
-    machine_id: str
-    sequence_number: str
-    validation_type: str
-    index_number: str
-    date_validation_operation: str
-    time_validation_operation: str
-    validation_number: str
-    ticket_amount: str
-    ticket_number: str
-    validation_system_id: str
-    expiration_date_printed_on_ticket: str
-    pool_id: str
-    current_hopper_length: str
-    current_hopper_status: str
-    current_hopper_percent_full: str
-    bin_validation_type: str
-    total_validations: str
-    cumulative_amount: str
-    total_number_of_games_implemented: str
-    game_n_number: str
-    game_n_coin_in: str
-    game_n_coin_out: str
-    game_n_jackpot: str
-    game_n_games_played: str
-    game_n_number_config: str
-    game_n_ascii_game_id: str
-    game_n_ascii_additional_id: str
-    game_n_bin_denomination: str
-    game_n_bin_max_bet: str
-    game_n_bin_progressive_group: str
-    game_n_bin_game_options: str
-    game_n_ascii_paytable_id: str
-    game_n_ascii_base_percentage: str
-    ascii_sas_version: str
-    ascii_sas_number: str
-    selected_game_number: str
-    number_of_enabled_games: str
-    enabled_game_numbers: str
-    cashout_type: str
-    cashout_amount: str
-    ticket_status: str
-    parsing_code: str
-    validation_data: str
-    registration_status: str
-    asset_number: str
-    registration_key: str
-    pos_id: str
-    game_lock_status: str
-    available_transfers: str
-    host_cashout_status: str
-    aft_status: str
-    max_buffer_index: str
-    current_cashable_amount: str
-    current_restricted_amount: str
-    current_non_restricted_amount: str
-    restricted_expiration: str
-    restricted_pool_id: str
-    game_number: str
-    features: []
+    """Class representing the Meters"""
+
+    STATUS_MAP = {
+        "total_cancelled_credits_meter": [],
+        "total_in_meter": [],
+        "total_out_meter": [],
+        "total_jackpot_meter": [],
+        "games_played_meter": [],
+        "games_won_meter": [],
+        "games_lost_meter": [],
+        "games_last_power_up": [],
+        "games_last_slot_door_close": [],
+        "slot_door_opened_meter": [],
+        "power_reset_meter": [],
+        "s1_bills_accepted_meter": [],
+        "s5_bills_accepted_meter": [],
+        "s10_bills_accepted_meter": [],
+        "s20_bills_accepted_meter": [],
+        "s50_bills_accepted_meter": [],
+        "s100_bills_accepted_meter": [],
+        "s500_bills_accepted_meter": [],
+        "s1000_bills_accepted_meter": [],
+        "s200_bills_accepted_meter": [],
+        "s25_bills_accepted_meter": [],
+        "s2000_bills_accepted_meter": [],
+        "s2500_bills_accepted_meter": [],
+        "s5000_bills_accepted_meter": [],
+        "s10000_bills_accepted_meter": [],
+        "s20000_bills_accepted_meter": [],
+        "s25000_bills_accepted_meter": [],
+        "s50000_bills_accepted_meter": [],
+        "s100000_bills_accepted_meter": [],
+        "s250_bills_accepted_meter": [],
+        "cashout_ticket_number": [],
+        "cashout_amount_in_cents": [],
+        "ASCII_game_ID": [],
+        "ASCII_additional_ID": [],
+        "bin_denomination": [],
+        "bin_max_bet": [],
+        "bin_progressive_mode": [],
+        "bin_game_options": [],
+        "ASCII_paytable_ID": [],
+        "ASCII_base_percentage": [],
+        "bill_meter_in_dollars": [],
+        "ROM_signature": [],
+        "current_credits": [],
+        "bin_level": [],
+        "amount": [],
+        "partial_pay_amount": [],
+        "bin_reset_ID": [],
+        "true_coin_in": [],
+        "true_coin_out": [],
+        "current_hopper_level": [],
+        "credit_amount_of_all_bills_accepted": [],
+        "coin_amount_accepted_from_external_coin_acceptor": [],
+        "country_code": [],
+        "bill_denomination": [],
+        "meter_for_accepted_bills": [],
+        "number_bills_in_stacker": [],
+        "credits_SAS_in_stacker": [],
+        "machine_ID": [],
+        "sequence_number": [],
+        "validation_type": [],
+        "index_number": [],
+        "date_validation_operation": [],
+        "time_validation_operation": [],
+        "validation_number": [],
+        "ticket_amount": [],
+        "ticket_number": [],
+        "validation_system_ID": [],
+        "expiration_date_printed_on_ticket": [],
+        "pool_id": [],
+        "current_hopper_length": [],
+        "current_hopper_status": [],
+        "current_hopper_percent_full": [],
+        "bin_validation_type": [],
+        "total_validations": [],
+        "cumulative_amount": [],
+        "total_number_of_games_implemented": [],
+        "game_n_number": [],
+        "game_n_coin_in_meter": [],
+        "game_n_coin_out_meter": [],
+        "game_n_jackpot_meter": [],
+        "geme_n_games_played_meter": [],
+        "game_n_number_config": [],
+        "game_n_ASCII_game_ID": [],
+        "game_n_ASCII_additional_id": [],
+        "game_n_bin_denomination": [],
+        "game_n_bin_max_bet": [],
+        "game_n_bin_progressive_group": [],
+        "game_n_bin_game_options": [],
+        "game_n_ASCII_paytable_ID": [],
+        "game_n_ASCII_base_percentage": [],
+        "ASCII_SAS_version": [],
+        "ASCII_serial_number": [],
+        "selected_game_number": [],
+        "number_of_enabled_games": [],
+        "enabled_games_numbers": [],
+        "cashout_type": [],
+        "cashout_amount": [],
+        "ticket_status": [],
+        "parsing_code": [],
+        "validation_data": [],
+        "registration_status": [],
+        "asset_number": [],
+        "registration_key": [],
+        "POS_ID": [],
+        "game_lock_status": [],
+        "available_transfers": [],
+        "host_cashout_status": [],
+        "AFT_status": [],
+        "max_buffer_index": [],
+        "current_cashable_amount": [],
+        "current_restricted_amount": [],
+        "current_non_restricted_amount": [],
+        "restricted_expiration": [],
+        "restricted_pool_ID": [],
+        "game_number": [],
+        "features_1": [],
+        "features_2": [],
+        "features_3": [],
+    }
+
+    @classmethod
+    def get_status(cls, key):
+        """Get the status value for the given key.
+
+        Args:
+            key (str): The key for the status.
+
+        Returns:
+            str: The corresponding status value or an error message if the key is not found.
+        """
+        # Use get() method to retrieve the value, or return an error message.
+        return cls.STATUS_MAP.get(key, f"Unknown key: {key}")
+
+    @classmethod
+    def get_non_empty_status_map(cls):
+        """Return a dictionary containing only keys with non-empty values."""
+        non_empty_map = {key: value for key, value in cls.STATUS_MAP.items() if value}
+        return non_empty_map
