@@ -1,5 +1,8 @@
 # SASPY
-Slots Accounting System (SAS) Protocol is a standard when comes to Slot Machine and VLTs.
+<p align="center">
+<img src="https://github.com/zacharytomlinson/saspy/assets/15037424/e8a8efc8-e83f-44f9-9ca1-7543a280e6b3" width="300" height="auto">
+</p>
+Slots Accounting System (SAS) Protocol is a standard when comes to Slot Machine and VLTs. And because we were bored and with not enough things to do we decided to build this library
 
 ## How To
 ```bash
