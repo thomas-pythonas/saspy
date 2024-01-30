@@ -1593,15 +1593,15 @@ class Sas:
                 "Transaction buffer position": int(
                     binascii.hexlify(bytearray(data[2:3]))
                 ),
-                "Transfer status": AFT_TRANSFER_STATUS[
+                "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                     binascii.hexlify(bytearray(data[3:4]))
-                ],
-                "Receipt status": AFT_RECEIPT_STATUS[
+                ),
+                "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                     binascii.hexlify(bytearray(data[4:5]))
-                ],
-                "Transfer type": AFT_TRANSFER_TYPE[
+                ),
+                "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                     binascii.hexlify(bytearray(data[5:6]))
-                ],
+                ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                 * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -1694,15 +1694,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    "Transfer status": AFT_TRANSFER_STATUS[
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[3:4]))
-                    ],
-                    "Receipt status": AFT_RECEIPT_STATUS[
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                    ],
-                    "Transfer type": AFT_TRANSFER_TYPE[
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
-                    ],
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -1776,15 +1776,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    "Transfer status": AFT_TRANSFER_STATUS[
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[3:4]))
-                    ],
-                    "Receipt status": AFT_RECEIPT_STATUS[
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                    ],
-                    "Transfer type": AFT_TRANSFER_TYPE[
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
-                    ],
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -1883,15 +1883,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    "Transfer status": AFT_TRANSFER_STATUS[
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[3:4]))
-                    ],
-                    "Receipt status": AFT_RECEIPT_STATUS[
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                    ],
-                    "Transfer type": AFT_TRANSFER_TYPE[
+                ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
-                    ],
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -1976,15 +1976,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    "Transfer status": AFT_TRANSFER_STATUS[
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[3:4]))
-                    ],
-                    "Receipt status": AFT_RECEIPT_STATUS[
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                    ],
-                    "Transfer type": AFT_TRANSFER_TYPE[
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
-                    ],
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -2032,15 +2032,15 @@ class Sas:
                 a = int(binascii.hexlify(bytearray(data[26:27])), 16)
                 response = {
                     "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
-                    "Transfer status": AFT_TRANSFER_STATUS[
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[3:4]))
-                    ],
-                    "Receipt status": AFT_RECEIPT_STATUS[
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                    ],
-                    "Transfer type": AFT_TRANSFER_TYPE[
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
-                    ],
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -2290,10 +2290,8 @@ class Sas:
         if data:
             AftStatements.AftStatements.STATUS_MAP[
                 "registration_status"
-            ] = AFT_REGISTRATION_STATUS[str(binascii.hexlify((data[2:3])))]
-            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
-                binascii.hexlify(data[3:7])
-            )
+            ] = binascii.hexlify(data[3:7])
+
             AftStatements.AftStatements.STATUS_MAP["registration_key"] = str(
                 binascii.hexlify(data[7:27])
             )
@@ -2372,15 +2370,15 @@ class Sas:
             a = int(binascii.hexlify(bytearray(data[26:27])), 16)
             response = {
                 "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
-                "Transfer status": AFT_TRANSFER_STATUS[
+                "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
                     binascii.hexlify(bytearray(data[3:4]))
-                ],
-                "Receipt status": AFT_RECEIPT_STATUS[
+                ),
+                "Receipt status": AftReceiptStatus.AftReceiptStatus.get_status(
                     binascii.hexlify(bytearray(data[4:5]))
-                ],
-                "Transfer type": AFT_TRANSFER_TYPE[
+                ),
+                "Transfer type": AftTransferType.AftTransferType.get_status(
                     binascii.hexlify(bytearray(data[5:6]))
-                ],
+                ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                 * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
