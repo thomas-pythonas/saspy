@@ -131,7 +131,7 @@ class Sas:
         self.open()
         # time.sleep(0.04)
         self.connection.flush()
-        self.connection.timeout = EVENTS_POLL_TIMEOUT
+        self.connection.timeout = self.poll_timeout
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
         self.connection.flushInput()
