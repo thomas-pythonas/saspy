@@ -122,26 +122,36 @@ class Sas:
 
     def open(self):
         try:
-            self.connection.open()
-        except Exception as e:
-            raise SASOpenError(e)
+            if self.connection.isOpen() is not True:
+                self.connection.open()
+        except:
+            raise SASOpenError
 
     def _conf_event_port(self):
-        self.close()
-        self.connection.timeout = self.poll_timeout
+        self.open()
+        # time.sleep(0.04)
+        self.connection.flush()
+        self.connection.timeout = EVENTS_POLL_TIMEOUT
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
-        self.open()
+        self.connection.flushInput()
 
     def _conf_port(self):
-        self.close()
+        self.open()
+        # time.sleep(0.04)
+        self.connection.flush()
         self.connection.timeout = self.timeout
         self.connection.parity = serial.PARITY_MARK
         self.connection.stopbits = serial.STOPBITS_ONE
-        self.open()
-
+        self.connection.flushInput()
+        
     @staticmethod
     def _crc(response, chk=False, seed=0):
+        # Old CRC method. Its work but is slowly.
+        # --------------------------------------------------------------------------
+        # Use  crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
+        #        buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
+        # --------------------------------------------------------------------------
         c = ""
         if chk:
             crc = response[-4:]
@@ -191,10 +201,10 @@ class Sas:
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.connection.write([self.poll_address, self.address])
-            self.close()
-
+            #self.close()
+            self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
-            self.open()
+            #self.open()
 
             self.connection.write((buf_header[1:]))
 
@@ -211,7 +221,7 @@ class Sas:
                     self.log.critical("no sas response %s" % (str(buf_header[1:])))
                     return None
 
-            response = self._check_response(response)
+            response = self._check_response(response) # FIXME: Raise exception
 
             self.log.debug("sas response %s", binascii.hexlify(response))
 
