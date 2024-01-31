@@ -1976,15 +1976,9 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
-                        binascii.hexlify(bytearray(data[3:4]))
-                    ),
-                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
-                        binascii.hexlify(bytearray(data[4:5]))
-                    ),
-                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
-                        binascii.hexlify(bytearray(data[5:6]))
-                    ),
+                    'Transfer status': AftTransferStatus.AftTransferStatus.get_status([binascii.hexlify(bytearray(data[3:4]))]),
+                    'Receipt status': AftReceiptStatus.AftReceiptStatus.get_status([binascii.hexlify(bytearray(data[4:5]))]),
+                    'Transfer type': AftTransferType.AftTransferType.get_status([binascii.hexlify(bytearray(data[5:6]))]),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
