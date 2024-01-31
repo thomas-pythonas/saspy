@@ -240,23 +240,15 @@ class Sas:
         if rsp == "":
             raise NoSasConnection
 
-        resp = bytearray(rsp)
-        tmp_crc = binascii.hexlify(resp[-2:])
-        command = resp[0:-2]
-        crc1 = CRC16Kermit().calculate(command.decode("utf-8"))
-        data = resp[1:-2]
-        crc1 = hex(crc1).split("x")[-1]
-
-        crc1 = crc1.zfill(4)
-
-        crc1 = bytes(crc1, "utf-8")
+        tmp_crc = binascii.hexlify(rsp[-2:])
+        crc1 = CRC16Kermit().calculate(rsp[0:-2])
+        crc1 = hex(crc1).zfill(4)
+        crc1 = bytes(crc1, "utf-8")[2:]
 
         if tmp_crc != crc1:
-            raise BadCRC(binascii.hexlify(resp))
-        elif tmp_crc == crc1:
-            return data
-
-        raise BadCRC(binascii.hexlify(resp))
+            raise BadCRC(binascii.hexlify(rsp))
+        else:
+            return rsp[1:-2]
 
     def events_poll(self, **kwargs):
         self._conf_event_port()
