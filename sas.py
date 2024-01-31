@@ -144,7 +144,7 @@ class Sas:
         self.connection.parity = serial.PARITY_MARK
         self.connection.stopbits = serial.STOPBITS_ONE
         self.connection.flushInput()
-        
+
     @staticmethod
     def _crc(response, chk=False, seed=0):
         # Old CRC method. Its work but is slowly.
@@ -201,10 +201,10 @@ class Sas:
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.connection.write([self.poll_address, self.address])
-            #self.close()
+            # self.close()
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
-            #self.open()
+            # self.open()
 
             self.connection.write((buf_header[1:]))
 
@@ -1350,6 +1350,7 @@ class Sas:
 
         return None
 
+    """
     def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
         # 63
         # FIXME: eft_send_promo_to_machine
@@ -1357,11 +1358,14 @@ class Sas:
         # status 0-init 1-end
         data = self._send_command(cmd, crc_need=True)
         if data:
-            eft_statement = {}
-            eft_statement["eft_status"] = str(binascii.hexlify(bytearray(data[1:])))
-            eft_statement["promo_amount"] = str(binascii.hexlify(bytearray(data[4:])))
+            EftStatement.eft_status = str(
+                binascii.hexlify(bytearray(data[1:]))
+            )
+            EftStatement.promo_amount = str(
+                binascii.hexlify(bytearray(data[4:]))
+            )
             # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-            return eft_statement
+            return EftStatement
 
         return None
 
@@ -1387,6 +1391,7 @@ class Sas:
             return data
 
         return None
+    """
 
     def authentication_info(
         self,
@@ -1398,10 +1403,10 @@ class Sas:
         seed_length=0,
         offset="",
         offset_length=0,
-        **kwargs,
+        **kwargs
     ):
         # 6E
-        # FIXME: autentification_info
+        # FIXME: authentication_info
         cmd = [0x6E, 0x00, action]
         if action == 0:
             cmd[1] = 1
@@ -1471,7 +1476,7 @@ class Sas:
         validation_data=0,
         restricted_expiration=0,
         pool_id=0,
-        **kwargs,
+        **kwargs
     ):
         # 71
         # FIXME: redeem_ticket
@@ -1880,7 +1885,7 @@ class Sas:
                     ),
                     "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                ),
+                    ),
                     "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
@@ -1968,9 +1973,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    'Transfer status': AftTransferStatus.AftTransferStatus.get_status([binascii.hexlify(bytearray(data[3:4]))]),
-                    'Receipt status': AftReceiptStatus.AftReceiptStatus.get_status([binascii.hexlify(bytearray(data[4:5]))]),
-                    'Transfer type': AftTransferType.AftTransferType.get_status([binascii.hexlify(bytearray(data[5:6]))]),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        [binascii.hexlify(bytearray(data[3:4]))]
+                    ),
+                    "Receipt status": AftReceiptStatus.AftReceiptStatus.get_status(
+                        [binascii.hexlify(bytearray(data[4:5]))]
+                    ),
+                    "Transfer type": AftTransferType.AftTransferType.get_status(
+                        [binascii.hexlify(bytearray(data[5:6]))]
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -2081,7 +2092,7 @@ class Sas:
         pool_id=0,
         receipt_data="",
         lock_timeout=0,
-        **kwargs,
+        **kwargs
     ):
         # 72
         cmd = [
@@ -2101,7 +2112,7 @@ class Sas:
             self._bcd_coder_array(pool_id, 2),
             len(receipt_data),
             receipt_data,
-            self._bcd_coder_array(lock_timeout, 2),
+            self._bcd_coder_array(lock_timeout, 2)
         ]
 
         data = self._send_command(cmd, crc_need=True)
@@ -2400,7 +2411,7 @@ class Sas:
         status_bits=[0, 0],
         cashable_ticket_receipt_exp=0,
         restricted_ticket_exp=0,
-        **kwargs,
+        **kwargs
     ):
         # 7B
         cmd = [
