@@ -9,7 +9,7 @@ title: '[FEATURE]'
 ### Summary of the feature being proposed
 (write here)
 
-### What value does this feature bring to Temporal?
+### What value does this feature bring to SASPy ?
 (write here)
 ### Are you willing to implement this feature yourself?
 (write here)
