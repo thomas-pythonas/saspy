@@ -144,7 +144,7 @@ class Sas:
         self.connection.parity = serial.PARITY_MARK
         self.connection.stopbits = serial.STOPBITS_ONE
         self.connection.flushInput()
-        
+
     @staticmethod
     def _crc(response, chk=False, seed=0):
         # Old CRC method. Its work but is slowly.
@@ -201,10 +201,10 @@ class Sas:
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.connection.write([self.poll_address, self.address])
-            #self.close()
+            # self.close()
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
-            #self.open()
+            # self.open()
 
             self.connection.write((buf_header[1:]))
 
@@ -250,7 +250,7 @@ class Sas:
         else:
             return rsp[1:-2]
 
-    def events_poll(self, **kwargs):
+    def events_poll(self):
         self._conf_event_port()
 
         cmd = [0x80 + self.address]
@@ -268,49 +268,49 @@ class Sas:
             raise e
         return event
 
-    def shutdown(self, **kwargs):
+    def shutdown(self):
         # [0x01]
         if self._send_command([0x01], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def startup(self, **kwargs):
+    def startup(self):
         # [0x02]
         if self._send_command([0x02], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def sound_off(self, **kwargs):
+    def sound_off(self):
         # [0x03]
         if self._send_command([0x03], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def sound_on(self, **kwargs):
+    def sound_on(self):
         # [0x04]
         if self._send_command([0x04], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def reel_spin_game_sounds_disabled(self, **kwargs):
+    def reel_spin_game_sounds_disabled(self):
         # [0x05]
         if self._send_command([0x05], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def enable_bill_acceptor(self, **kwargs):
+    def enable_bill_acceptor(self):
         # [0x06]
         if self._send_command([0x06], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def disable_bill_acceptor(self, **kwargs):
+    def disable_bill_acceptor(self):
         # [0x07]
         if self._send_command([0x07], True, crc_need=True) == self.address:
             return True
@@ -318,7 +318,7 @@ class Sas:
         return False
 
     def configure_bill_denom(
-        self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF], **kwargs
+        self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
     ):
         cmd = [0x08, 0x00]
         cmd.extend(bill_denom)
@@ -329,7 +329,7 @@ class Sas:
 
         return False
 
-    def en_dis_game(self, game_number=None, en_dis=False, **kwargs):
+    def en_dis_game(self, game_number=None, en_dis=False):
         if not game_number:
             game_number = self.selected_game_number()
 
@@ -350,21 +350,21 @@ class Sas:
 
         return False
 
-    def enter_maintenance_mode(self, **kwargs):
+    def enter_maintenance_mode(self):
         # [0x0A]
         if self._send_command([0x0A], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def exit_maintenance_mode(self, **kwargs):
+    def exit_maintenance_mode(self):
         # [0x0B]
         if self._send_command([0x0B], True, crc_need=True) == self.address:
             return True
 
         return False
 
-    def en_dis_rt_event_reporting(self, enable=False, **kwargs):
+    def en_dis_rt_event_reporting(self, enable=False):
         # 0E
         if not enable:
             enable = [0]
@@ -379,7 +379,7 @@ class Sas:
 
         return False
 
-    def send_meters_10_15(self, denom=True, **kwargs):
+    def send_meters_10_15(self, denom=True):
         cmd = [0x0F]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
@@ -427,7 +427,7 @@ class Sas:
 
         return None
 
-    def total_cancelled_credits(self, denom=True, **kwargs):
+    def total_cancelled_credits(self, denom=True):
         # 10
         cmd = [0x10]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -441,7 +441,7 @@ class Sas:
 
         return None
 
-    def total_bet_meter(self, denom=True, **kwargs):
+    def total_bet_meter(self, denom=True):
         # 11
         cmd = [0x11]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -455,7 +455,7 @@ class Sas:
 
         return None
 
-    def total_win_meter(self, denom=True, **kwargs):
+    def total_win_meter(self, denom=True):
         # 12
         cmd = [0x12]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -469,7 +469,7 @@ class Sas:
 
         return None
 
-    def total_in_meter(self, denom=True, **kwargs):
+    def total_in_meter(self, denom=True):
         # 13
         cmd = [0x13]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -483,7 +483,7 @@ class Sas:
 
         return None
 
-    def total_jackpot_meter(self, denom=True, **kwargs):
+    def total_jackpot_meter(self, denom=True):
         # 14
         cmd = [0x14]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -497,7 +497,7 @@ class Sas:
 
         return None
 
-    def games_played_meter(self, **kwargs):
+    def games_played_meter(self):
         # 15
         cmd = [0x15]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -506,7 +506,7 @@ class Sas:
 
         return None
 
-    def games_won_meter(self, denom=True, **kwargs):
+    def games_won_meter(self, denom=True):
         # 16
         cmd = [0x16]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -520,7 +520,7 @@ class Sas:
 
         return None
 
-    def games_lost_meter(self, **kwargs):
+    def games_lost_meter(self):
         # 17
         cmd = [0x17]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -529,7 +529,7 @@ class Sas:
 
         return None
 
-    def games_powerup_door_opened(self, **kwargs):
+    def games_powerup_door_opened(self):
         # 18
         cmd = [0x18]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -544,7 +544,7 @@ class Sas:
 
         return None
 
-    def meters_11_15(self, denom=True, **kwargs):
+    def meters_11_15(self, denom=True):
         # 19
         cmd = [0x19]
         data = self._send_command(cmd, crc_need=False, size=24)
@@ -585,7 +585,7 @@ class Sas:
 
         return None
 
-    def current_credits(self, denom=True, **kwargs):
+    def current_credits(self, denom=True):
         # 1A
         cmd = [0x1A]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -599,7 +599,7 @@ class Sas:
 
         return None
 
-    def handpay_info(self, **kwargs):
+    def handpay_info(self):
         # 1B
         cmd = [0x1B]
         data = self._send_command(cmd, crc_need=False)
@@ -620,7 +620,7 @@ class Sas:
 
         return None
 
-    def meters(self, denom=True, **kwargs):
+    def meters(self, denom=True):
         # 1C
         cmd = [0x1C]
         data = self._send_command(cmd, crc_need=False, size=36)
@@ -680,7 +680,7 @@ class Sas:
 
         return None
 
-    def total_bill_meters(self, **kwargs):
+    def total_bill_meters(self):
         # 1E
         cmd = [0x1E]
         data = self._send_command(cmd, crc_need=False, size=28)
@@ -733,7 +733,7 @@ class Sas:
             # return data
         return None
 
-    def total_dollar_value_of_bills_meter(self, **kwargs):
+    def total_dollar_value_of_bills_meter(self):
         # 20
         cmd = [0x20]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -743,7 +743,7 @@ class Sas:
 
         return None
 
-    def rom_signature_verification(self, **kwargs):
+    def rom_signature_verification(self):
         # 21
         cmd = [0x21, 0x00, 0x00]
         data = self._send_command(cmd, crc_need=True)
@@ -752,7 +752,7 @@ class Sas:
 
         return None
 
-    def eft_button_pressed(self, state=0, **kwargs):
+    def eft_button_pressed(self, state=0):
         # 24
         cmd = [0x24, 0x03, state]
         data = self._send_command(cmd, crc_need=True)
@@ -761,7 +761,7 @@ class Sas:
 
         return None
 
-    def true_coin_in(self, denom=True, **kwargs):
+    def true_coin_in(self, denom=True):
         # 2A
         cmd = [0x2A]
         data = self._send_command(cmd, crc_need=False)
@@ -775,7 +775,7 @@ class Sas:
 
         return None
 
-    def true_coin_out(self, denom=True, **kwargs):
+    def true_coin_out(self, denom=True):
         # 2B
         cmd = [0x2B]
         data = self._send_command(cmd, crc_need=False)
@@ -789,7 +789,7 @@ class Sas:
 
         return None
 
-    def curr_hopper_level(self, **kwargs):
+    def curr_hopper_level(self):
         # 2C
         cmd = [0x2C]
         data = self._send_command(cmd, crc_need=False)
@@ -798,7 +798,7 @@ class Sas:
 
         return None
 
-    def total_hand_paid_cancelled_credit(self, **kwargs):
+    def total_hand_paid_cancelled_credit(self):
         # 2D
         cmd = [0x2D]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -807,7 +807,7 @@ class Sas:
 
         return None
 
-    def delay_game(self, delay_time=100, **kwargs):
+    def delay_game(self, delay_time=100):
         # 2E
         delay_time = str(delay_time)
         delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
@@ -822,12 +822,12 @@ class Sas:
             return False
 
     @staticmethod
-    def selected_meters_for_game(**kwargs):
+    def selected_meters_for_game():
         # 2F
         # TODO: selected_meters_for_game
         return None
 
-    def send_1_bills_in_meters(self, **kwargs):
+    def send_1_bills_in_meters(self):
         # 31
         cmd = [0x31]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -836,7 +836,7 @@ class Sas:
 
         return None
 
-    def send_2_bills_in_meters(self, **kwargs):
+    def send_2_bills_in_meters(self):
         # 32
         cmd = [0x32]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -845,7 +845,7 @@ class Sas:
 
         return None
 
-    def send_5_bills_in_meters(self, **kwargs):
+    def send_5_bills_in_meters(self):
         # 33
         cmd = [0x33]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -854,7 +854,7 @@ class Sas:
 
         return None
 
-    def send_10_bills_in_meters(self, **kwargs):
+    def send_10_bills_in_meters(self):
         # 34
         cmd = [0x34]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -863,7 +863,7 @@ class Sas:
 
         return None
 
-    def send_20_bills_in_meters(self, **kwargs):
+    def send_20_bills_in_meters(self):
         # 35
         cmd = [0x35]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -872,7 +872,7 @@ class Sas:
 
         return None
 
-    def send_50_bills_in_meters(self, **kwargs):
+    def send_50_bills_in_meters(self):
         # 36
         cmd = [0x36]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -881,7 +881,7 @@ class Sas:
 
         return None
 
-    def send_100_bills_in_meters(self, **kwargs):
+    def send_100_bills_in_meters(self):
         # 37
         cmd = [0x37]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -890,7 +890,7 @@ class Sas:
 
         return None
 
-    def send_500_bills_in_meters(self, **kwargs):
+    def send_500_bills_in_meters(self):
         # 38
         cmd = [0x38]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -899,7 +899,7 @@ class Sas:
 
         return None
 
-    def send_1000_bills_in_meters(self, **kwargs):
+    def send_1000_bills_in_meters(self):
         # 39
         cmd = [0x39]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -908,7 +908,7 @@ class Sas:
 
         return None
 
-    def send_200_bills_in_meters(self, **kwargs):
+    def send_200_bills_in_meters(self):
         # 3A
         cmd = [0x3A]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -917,7 +917,7 @@ class Sas:
 
         return None
 
-    def send_25_bills_in_meters(self, **kwargs):
+    def send_25_bills_in_meters(self):
         # 3B
         cmd = [0x3B]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -926,7 +926,7 @@ class Sas:
 
         return None
 
-    def send_2000_bills_in_meters(self, **kwargs):
+    def send_2000_bills_in_meters(self):
         # 3C
         cmd = [0x3C]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -934,7 +934,7 @@ class Sas:
             return int(binascii.hexlify(bytearray(data[1:5])))
         return None
 
-    def cash_out_ticket_info(self, **kwargs):
+    def cash_out_ticket_info(self):
         # 3D
         cmd = [0x3D]
         data = self._send_command(cmd, crc_need=False)
@@ -946,7 +946,7 @@ class Sas:
 
         return None
 
-    def send_2500_bills_in_meters(self, **kwargs):
+    def send_2500_bills_in_meters(self):
         # 3E
         cmd = [0x3E]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -955,7 +955,7 @@ class Sas:
 
         return None
 
-    def send_5000_bills_in_meters(self, **kwargs):
+    def send_5000_bills_in_meters(self):
         # 3F
         cmd = [0x3F]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -964,7 +964,7 @@ class Sas:
 
         return None
 
-    def send_10000_bills_in_meters(self, **kwargs):
+    def send_10000_bills_in_meters(self):
         # 40
         cmd = [0x40]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -973,7 +973,7 @@ class Sas:
 
         return None
 
-    def send_20000_bills_in_meters(self, **kwargs):
+    def send_20000_bills_in_meters(self):
         # 41
         cmd = [0x41]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -982,7 +982,7 @@ class Sas:
 
         return None
 
-    def send_25000_bills_in_meters(self, **kwargs):
+    def send_25000_bills_in_meters(self):
         # 42
         cmd = [0x42]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -991,7 +991,7 @@ class Sas:
 
         return None
 
-    def send_50000_bills_in_meters(self, **kwargs):
+    def send_50000_bills_in_meters(self):
         # 43
         cmd = [0x43]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1000,7 +1000,7 @@ class Sas:
 
         return None
 
-    def send_100000_bills_in_meters(self, **kwargs):
+    def send_100000_bills_in_meters(self):
         # 44
         cmd = [0x44]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1009,7 +1009,7 @@ class Sas:
 
         return None
 
-    def send_250_bills_in_meters(self, **kwargs):
+    def send_250_bills_in_meters(self):
         # 45
         cmd = [0x45]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1018,7 +1018,7 @@ class Sas:
 
         return None
 
-    def credit_amount_of_all_bills_accepted(self, **kwargs):
+    def credit_amount_of_all_bills_accepted(self):
         # 46
         cmd = [0x46]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1027,7 +1027,7 @@ class Sas:
 
         return None
 
-    def coin_amount_accepted_from_external_coin_acceptor(self, **kwargs):
+    def coin_amount_accepted_from_external_coin_acceptor(self):
         # 47
         cmd = [0x47]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1036,7 +1036,7 @@ class Sas:
 
         return None
 
-    def last_accepted_bill_info(self, **kwargs):
+    def last_accepted_bill_info(self):
         # 48
         cmd = [0x48]
         data = self._send_command(cmd, crc_need=False)
@@ -1054,7 +1054,7 @@ class Sas:
 
         return None
 
-    def number_of_bills_currently_in_stacker(self, **kwargs):
+    def number_of_bills_currently_in_stacker(self):
         # 49
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1063,7 +1063,7 @@ class Sas:
 
         return None
 
-    def total_credit_amount_of_all_bills_in_stacker(self, **kwargs):
+    def total_credit_amount_of_all_bills_in_stacker(self):
         # 4A
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
@@ -1073,7 +1073,7 @@ class Sas:
         return None
 
     def set_secure_enhanced_validation_id(
-        self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01], **kwargs
+        self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
     ):
         """
         For a gaming machine to perform secure enhanced ticket/receipt/handpay validation, the host must use
@@ -1102,7 +1102,7 @@ class Sas:
 
         return None
 
-    def enhanced_validation_information(self, curr_validation_info=0, **kwargs):
+    def enhanced_validation_information(self, curr_validation_info=0):
         # 4D
         # FIXME: enhanced_validation_information
         cmd = [0x4D, curr_validation_info]
@@ -1143,7 +1143,7 @@ class Sas:
 
         return None
 
-    def current_hopper_status(self, **kwargs):
+    def current_hopper_status(self):
         # 4F
         # FIXME: current_hopper_status
         cmd = [0x4F]
@@ -1165,7 +1165,7 @@ class Sas:
 
         return None
 
-    def validation_meters(self, type_of_validation=0x00, **kwargs):
+    def validation_meters(self, type_of_validation=0x00):
         # 50
         # FIXME: validation_meters
         cmd = [0x50, type_of_validation]
@@ -1184,7 +1184,7 @@ class Sas:
 
         return None
 
-    def total_number_of_games_implemented(self, **kwargs):
+    def total_number_of_games_implemented(self):
         # 51
         cmd = [0x51]
         # FIXME: cmd.extend(type_of_validation)
@@ -1194,7 +1194,7 @@ class Sas:
 
         return None
 
-    def game_meters(self, n=None, denom=True, **kwargs):
+    def game_meters(self, n=None, denom=True):
         # 52
         cmd = [0x52]
 
@@ -1242,7 +1242,7 @@ class Sas:
 
         return None
 
-    def game_configuration(self, n=None, **kwargs):
+    def game_configuration(self, n=None):
         # 53
         cmd = [0x53]
         # FIXME: game_configuration
@@ -1281,7 +1281,7 @@ class Sas:
 
         return None
 
-    def sas_version_gaming_machine_serial_id(self, **kwargs):
+    def sas_version_gaming_machine_serial_id(self):
         # 54
         """
         This function should be checked at begin in order to address
@@ -1299,7 +1299,7 @@ class Sas:
 
         return None
 
-    def selected_game_number(self, in_hex=True, **kwargs):
+    def selected_game_number(self, in_hex=True):
         # 55
         cmd = [0x55]
         data = self._send_command(cmd, crc_need=False, size=6)
@@ -1311,7 +1311,7 @@ class Sas:
 
         return None
 
-    def enabled_game_numbers(self, **kwargs):
+    def enabled_game_numbers(self):
         # 56
         cmd = [0x56]
         data = self._send_command(cmd, crc_need=False)
@@ -1326,7 +1326,7 @@ class Sas:
 
         return None
 
-    def pending_cashout_info(self, **kwargs):
+    def pending_cashout_info(self):
         # 57
         cmd = [0x57]
         data = self._send_command(cmd, crc_need=False)
@@ -1341,7 +1341,7 @@ class Sas:
 
         return None
 
-    def validation_number(self, validation_id=1, valid_number=0, **kwargs):
+    def validation_number(self, validation_id=1, valid_number=0):
         # 58
         cmd = [0x58, validation_id, self._bcd_coder_array(valid_number, 8)]
         data = self._send_command(cmd, crc_need=True)
@@ -1350,6 +1350,7 @@ class Sas:
 
         return None
 
+    """
     def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
         # 63
         # FIXME: eft_send_promo_to_machine
@@ -1357,11 +1358,14 @@ class Sas:
         # status 0-init 1-end
         data = self._send_command(cmd, crc_need=True)
         if data:
-            eft_statement = {}
-            eft_statement["eft_status"] = str(binascii.hexlify(bytearray(data[1:])))
-            eft_statement["promo_amount"] = str(binascii.hexlify(bytearray(data[4:])))
+            EftStatement.eft_status = str(
+                binascii.hexlify(bytearray(data[1:]))
+            )
+            EftStatement.promo_amount = str(
+                binascii.hexlify(bytearray(data[4:]))
+            )
             # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-            return eft_statement
+            return EftStatement
 
         return None
 
@@ -1387,6 +1391,7 @@ class Sas:
             return data
 
         return None
+    """
 
     def authentication_info(
         self,
@@ -1398,10 +1403,9 @@ class Sas:
         seed_length=0,
         offset="",
         offset_length=0,
-        **kwargs,
     ):
         # 6E
-        # FIXME: autentification_info
+        # FIXME: authentication_info
         cmd = [0x6E, 0x00, action]
         if action == 0:
             cmd[1] = 1
@@ -1436,12 +1440,12 @@ class Sas:
         return None
 
     @staticmethod
-    def extended_meters_for_game(n=1, **kwargs):
+    def extended_meters_for_game():
         # TODO: extended_meters_for_game
         # 6F
         return None
 
-    def ticket_validation_data(self, **kwargs):
+    def ticket_validation_data(self):
         # 70
         # FIXME: ticket_validation_data
         cmd = [0x70]
@@ -1470,8 +1474,7 @@ class Sas:
         parsing_code=0,
         validation_data=0,
         restricted_expiration=0,
-        pool_id=0,
-        **kwargs,
+        pool_id=0
     ):
         # 71
         # FIXME: redeem_ticket
@@ -1503,7 +1506,7 @@ class Sas:
 
         return None
 
-    def aft_jp(self, money, amount=1, lock_timeout=0, games=None, **kwargs):
+    def aft_jp(self, money, amount=1, lock_timeout=0, games=None):
         # FIXME: make logically coherent
         # self.lock_emg(lock_time=500, condition=1)
         money_1 = money_2 = money_3 = "0000000000"
@@ -1614,7 +1617,7 @@ class Sas:
 
         return response
 
-    def aft_out(self, money=None, amount=1, lock_timeout=0, **kwargs):
+    def aft_out(self, money=None, amount=1, lock_timeout=0):
         """
         aft_out is a function to make a machine cashout (effectively removes the credit in the machine)
         :param money:
@@ -1715,7 +1718,7 @@ class Sas:
 
         return response
 
-    def aft_cashout_enable(self, amount=1, money="0000000000", **kwargs):
+    def aft_cashout_enable(self, amount=1, money="0000000000"):
         money_1 = money_2 = money_3 = "0000000000"
 
         match amount:
@@ -1803,7 +1806,7 @@ class Sas:
         return True
 
     def aft_won(
-        self, money="0000000000", amount=1, games=None, lock_timeout=0, **kwargs
+        self, money="0000000000", amount=1, games=None, lock_timeout=0
     ):
         money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
@@ -1880,7 +1883,7 @@ class Sas:
                     ),
                     "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[4:5]))
-                ),
+                    ),
                     "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
@@ -1904,7 +1907,7 @@ class Sas:
 
         return response
 
-    def aft_in(self, money, amount=1, lock_timeout=0, **kwargs):
+    def aft_in(self, money, amount=1):
         """
         aft_in is the function you want to use to charge money into your machine
 
@@ -1968,9 +1971,15 @@ class Sas:
                     "Transaction buffer position": int(
                         binascii.hexlify(bytearray(data[2:3]))
                     ),
-                    'Transfer status': AftTransferStatus.AftTransferStatus.get_status([binascii.hexlify(bytearray(data[3:4]))]),
-                    'Receipt status': AftReceiptStatus.AftReceiptStatus.get_status([binascii.hexlify(bytearray(data[4:5]))]),
-                    'Transfer type': AftTransferType.AftTransferType.get_status([binascii.hexlify(bytearray(data[5:6]))]),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        [binascii.hexlify(bytearray(data[3:4]))]
+                    ),
+                    "Receipt status": AftReceiptStatus.AftReceiptStatus.get_status(
+                        [binascii.hexlify(bytearray(data[4:5]))]
+                    ),
+                    "Transfer type": AftTransferType.AftTransferType.get_status(
+                        [binascii.hexlify(bytearray(data[5:6]))]
+                    ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
                     * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
@@ -1992,7 +2001,7 @@ class Sas:
             self.aft_unregister()
             self.log.error(e, exc_info=True)
 
-    def aft_clean_transaction_poll(self, register=False, **kwargs):
+    def aft_clean_transaction_poll(self, register=False):
         """Remember to loop this function AFTER calling aft_in.
         If it raises an error or returns 'Transfer pending (not complete)'
         you continue to execute until 'Full transfer successful'.
@@ -2080,8 +2089,7 @@ class Sas:
         expiration=0,
         pool_id=0,
         receipt_data="",
-        lock_timeout=0,
-        **kwargs,
+        lock_timeout=0
     ):
         # 72
         cmd = [
@@ -2101,7 +2109,7 @@ class Sas:
             self._bcd_coder_array(pool_id, 2),
             len(receipt_data),
             receipt_data,
-            self._bcd_coder_array(lock_timeout, 2),
+            self._bcd_coder_array(lock_timeout, 2)
         ]
 
         data = self._send_command(cmd, crc_need=True)
@@ -2180,7 +2188,7 @@ class Sas:
 
         return None
 
-    def aft_get_last_trx(self, **kwargs):
+    def aft_get_last_trx(self):
         cmd = [0x72, 0x02, 0xFF, 0x00]
         data = self._send_command(cmd, crc_need=True, size=90)
         if data:
@@ -2212,7 +2220,7 @@ class Sas:
 
         return self.transaction
 
-    def aft_format_transaction(self, from_egm=False, **kwargs):
+    def aft_format_transaction(self, from_egm=False):
         if from_egm:
             self.aft_get_last_trx()
 
@@ -2243,21 +2251,21 @@ class Sas:
         self.transaction = int(response, 16)
         return response
 
-    def aft_register(self, reg_code=0x01, **kwargs):
+    def aft_register(self, reg_code=0x01):
         try:
             return self.aft_register_gaming_machine(reg_code=reg_code)
         except Exception as e:
             self.log.error(e, exc_info=True)
             return None
 
-    def aft_unregister(self, reg_code=0x80, **kwargs):
+    def aft_unregister(self, reg_code=0x80):
         try:
             return self.aft_register_gaming_machine(reg_code=reg_code)
         except Exception as e:
             self.log.error(e, exc_info=True)
             return None
 
-    def aft_register_gaming_machine(self, reg_code=0xFF, **kwargs):
+    def aft_register_gaming_machine(self, reg_code=0xFF):
         # 73
         cmd = [0x73, 0x00, reg_code]
 
@@ -2288,16 +2296,16 @@ class Sas:
 
         return None
 
-    def aft_game_lock(self, lock_timeout=100, condition=00, **kwargs):
+    def aft_game_lock(self, lock_timeout=100, condition=00):
         return self.aft_game_lock_and_status_request(
             lock_code=0x00, lock_timeout=lock_timeout, transfer_condition=condition
         )
 
-    def aft_game_unlock(self, **kwargs):
+    def aft_game_unlock(self):
         return self.aft_game_lock_and_status_request(lock_code=0x80)
 
     def aft_game_lock_and_status_request(
-        self, lock_code=0x00, transfer_condition=00, lock_timeout=0, **kwargs
+        self, lock_code=0x00, transfer_condition=00, lock_timeout=0
     ):
         # 74
         cmd = [
@@ -2347,7 +2355,7 @@ class Sas:
 
         return None
 
-    def aft_cancel_request(self, **kwargs):
+    def aft_cancel_request(self):
         cmd = [0x72, 0x01, 0x80]
         self.aft_register()
         response = None
@@ -2386,11 +2394,11 @@ class Sas:
 
         return False
 
-    def aft_receipt_data(self, **kwargs):
+    def aft_receipt_data(self):
         # TODO: 75
         return NotImplemented
 
-    def aft_set_custom_ticket_data(self, **kwargs):
+    def aft_set_custom_ticket_data(self):
         # TODO: 76
         return NotImplemented
 
@@ -2399,8 +2407,7 @@ class Sas:
         control_mask=[0, 0],
         status_bits=[0, 0],
         cashable_ticket_receipt_exp=0,
-        restricted_ticket_exp=0,
-        **kwargs,
+        restricted_ticket_exp=0
     ):
         # 7B
         cmd = [
@@ -2431,15 +2438,15 @@ class Sas:
 
         return None
 
-    def set_extended_ticket_data(self, **kwargs):
+    def set_extended_ticket_data(self):
         # TODO: 7C
         return NotImplemented
 
-    def set_ticket_data(self, **kwargs):
+    def set_ticket_data(self):
         # TODO: 7D
         return NotImplemented
 
-    def current_date_time(self, **kwargs):
+    def current_date_time(self):
         # 7E
         cmd = [0x7E]
         data = self._send_command(cmd, crc_need=False, size=11)
@@ -2449,7 +2456,7 @@ class Sas:
 
         return None
 
-    def receive_date_time(self, dates, times, **kwargs):
+    def receive_date_time(self, dates, times):
         # 7F
         cmd = [0x7F]
         fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
@@ -2464,36 +2471,36 @@ class Sas:
         return False
 
     @staticmethod
-    def receive_progressive_amount(**kwargs):
+    def receive_progressive_amount():
         # TODO: 80
         return NotImplemented
 
     @staticmethod
-    def cumulative_progressive_wins(**kwargs):
+    def cumulative_progressive_wins():
         # TODO: 83
         return NotImplemented
 
     @staticmethod
-    def progressive_win_amount(**kwargs):
+    def progressive_win_amount():
         # TODO: 84
         return NotImplemented
 
     @staticmethod
-    def sas_progressive_win_amount(**kwargs):
+    def sas_progressive_win_amount():
         # TODO: 85
         return NotImplemented
 
     @staticmethod
-    def receive_multiple_progressive_levels(**kwargs):
+    def receive_multiple_progressive_levels():
         # TODO: 86
         return NotImplemented
 
     @staticmethod
-    def multiple_sas_progressive_win_amounts(**kwargs):
+    def multiple_sas_progressive_win_amounts():
         # TODO: 87
         return NotImplemented
 
-    def initiate_legacy_bonus_pay(self, money, tax="00", games=None, **kwargs):
+    def initiate_legacy_bonus_pay(self, money, tax="00", games=None, ):
         # 8A
         if not games:
             for i in range(3):
@@ -2524,31 +2531,31 @@ class Sas:
         return False
 
     @staticmethod
-    def initiate_multiplied_jackpot_mode(**kwargs):
+    def initiate_multiplied_jackpot_mode():
         # TODO: 8B
         return NotImplemented
 
     @staticmethod
-    def enter_exit_tournament_mode(**kwargs):
+    def enter_exit_tournament_mode():
         # TODO: 8C
         return NotImplemented
 
     @staticmethod
-    def card_info(**kwargs):
+    def card_info():
         # TODO: 8E
         return NotImplemented
 
     @staticmethod
-    def physical_reel_stop_info(**kwargs):
+    def physical_reel_stop_info():
         # TODO: 8F
         return NotImplemented
 
     @staticmethod
-    def legacy_bonus_win_info(**kwargs):
+    def legacy_bonus_win_info():
         # TODO: 90
         return NotImplemented
 
-    def remote_handpay_reset(self, **kwargs):
+    def remote_handpay_reset(self, ):
         # 94
         cmd = [0x94]
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -2557,31 +2564,31 @@ class Sas:
         return False
 
     @staticmethod
-    def tournament_games_played(**kwargs):
+    def tournament_games_played():
         # TODO: 95
         return NotImplemented
 
     @staticmethod
-    def tournament_games_won(**kwargs):
+    def tournament_games_won():
         # TODO: 96
         return NotImplemented
 
     @staticmethod
-    def tournament_credits_wagered(**kwargs):
+    def tournament_credits_wagered():
         # TODO: 97
         return NotImplemented
 
     @staticmethod
-    def tournament_credits_won(**kwargs):
+    def tournament_credits_won():
         # TODO: 98
         return NotImplemented
 
     @staticmethod
-    def meters_95_98(**kwargs):
+    def meters_95_98():
         # TODO: 99
         return NotImplemented
 
-    def legacy_bonus_meters(self, denom=True, n=0, **kwargs):
+    def legacy_bonus_meters(self, denom=True, n=0):
         # 9A
         cmd = [0x9A, ((n >> 8) & 0xFF), (n & 0xFF)]
         data = self._send_command(cmd, crc_need=True, size=18)
@@ -2616,7 +2623,7 @@ class Sas:
 
         return None
 
-    def toggle_autorebet(self, val=True, **kwargs):
+    def toggle_autorebet(self, val=True):
         cmd = [0xAA]
         if not val:
             # AA00
@@ -2630,7 +2637,7 @@ class Sas:
 
         return False
 
-    def enabled_features(self, game_number=0, **kwargs):
+    def enabled_features(self, game_number=0):
         # A0
         # FIXME: This makes no sense
         # Basically tells which feature a selected games has. - Antonio
@@ -2686,60 +2693,60 @@ class Sas:
         return None
 
     @staticmethod
-    def cashout_limit(**kwargs):
+    def cashout_limit():
         # TODO: A4
         return NotImplemented
 
     @staticmethod
-    def enable_jackpot_handpay_reset_method(**kwargs):
+    def enable_jackpot_handpay_reset_method():
         # TODO: A8
         return NotImplemented
 
     @staticmethod
-    def extended_meters_game_alt(n=1, **kwargs):
+    def extended_meters_game_alt():
         # TODO: AF
         return NotImplemented
 
     @staticmethod
-    def multi_denom_preamble(**kwargs):
+    def multi_denom_preamble():
         # TODO: B0
         return NotImplemented
 
     @staticmethod
-    def current_player_denomination(**kwargs):
+    def current_player_denomination():
         # TODO: B1
         return NotImplemented
 
     @staticmethod
-    def enabled_player_denominations(**kwargs):
+    def enabled_player_denominations():
         # TODO: B2
         return NotImplemented
 
     @staticmethod
-    def token_denomination(**kwargs):
+    def token_denomination():
         # TODO: B3
         return NotImplemented
 
     @staticmethod
-    def wager_category_info(**kwargs):
+    def wager_category_info():
         # TODO: B4
         return NotImplemented
 
     @staticmethod
-    def extended_game_info(n=1, **kwargs):
+    def extended_game_info(n=1):
         # TODO: B5
         return NotImplemented
 
     @staticmethod
-    def event_response_to_long_poll(**kwargs):
+    def event_response_to_long_poll():
         # TODO: FF
         return NotImplemented
 
-    def _bcd_coder_array(self, value=0, length=4, **kwargs):
+    def _bcd_coder_array(self, value=0, length=4):
         return self._int_to_bcd(value, length)
 
     @staticmethod
-    def _int_to_bcd(number=0, length=5, **kwargs):
+    def _int_to_bcd(number=0, length=5, ):
         n = m = bval = 0
         p = length - 1
         result = []
