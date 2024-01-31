@@ -221,7 +221,7 @@ class Sas:
                     self.log.critical("no sas response %s" % (str(buf_header[1:])))
                     return None
 
-            response = self._check_response(response) # FIXME: Raise exception
+            response = self._check_response(response)
 
             self.log.debug("sas response %s", binascii.hexlify(response))
 
