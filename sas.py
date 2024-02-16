@@ -34,6 +34,7 @@ class Sas:
         pos_id="B374A402",  # Pos ID
         key="44",  # Key
         debug_level="DEBUG",  # Debug Level
+        perpetual=False # When this is true the lib will try forever to connect to the serial
     ):
         # Let's address some internal var
         self.poll_timeout = timeout
@@ -47,6 +48,7 @@ class Sas:
         self.transaction = None
         self.my_key = key
         self.poll_address = poll_address
+        self.perpetual = perpetual
 
         # Init the Logging system
         self.log = log_to_stderr()
@@ -65,6 +67,10 @@ class Sas:
                 self.log.info("Connection Successful")
                 break
             except:
+                if not self.perpetual:
+                    self.log.critical("Error while connecting to the machine....Quitting...")
+                    exit(1) # Make a graceful exit since it's expected behaviour
+
                 self.log.critical("Error while connecting to the machine....")
                 time.sleep(1)
 
@@ -77,8 +83,8 @@ class Sas:
         try:
             if not self.is_open():
                 self.open()
-            self.connection.flushOutput()
-            self.connection.flushInput()
+            self.connection.reset_output_buffer()
+            self.connection.reset_input_buffer()
         except Exception as e:
             self.log.error(e, exc_info=True)
 
@@ -97,8 +103,8 @@ class Sas:
                 except Exception as e:
                     self.log.critical(e, exc_info=True)
             else:
-                self.connection.flushOutput()
-                self.connection.flushInput()
+                self.connection.reset_output_buffer()
+                self.connection.reset_input_buffer()
                 response = self.connection.read(1)
 
                 if not response:
