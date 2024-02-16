@@ -33,5 +33,11 @@ Write down what you thought would happen.
 
 - SASPy version used:
 - Python version used:
-- O.S. runing the code:
+- O.S. running the code:
 - VLT Vendor and Model:
+
+**Connection Method (check one please)**
+- [ ] Prolific USB Cable
+- [ ] Raspberry miniUART
+- [ ] RS-232 to TTL (Like MAX3323)
+- [ ] Other: <!-- Write here -->
