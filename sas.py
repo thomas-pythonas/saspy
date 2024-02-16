@@ -48,7 +48,7 @@ class Sas:
         self.my_key = key
         self.poll_address = poll_address
 
-        # Let's Init the Logging system
+        # Init the Logging system
         self.log = log_to_stderr()
         self.log.setLevel(logging.getLevelName(debug_level))
 
@@ -71,7 +71,7 @@ class Sas:
         return
 
     def is_open(self):
-        return self.connection.isOpen()
+        return self.connection.is_open
 
     def flush(self):
         try:
