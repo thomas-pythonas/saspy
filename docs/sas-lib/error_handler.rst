@@ -1,4 +1,4 @@
-error\_handler module
+Error Handling
 =====================
 
 .. automodule:: error_handler

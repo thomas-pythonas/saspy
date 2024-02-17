@@ -2073,7 +2073,7 @@ class Sas:
             offset="",
             offset_length=0,
     ):
-        """
+        """Authentication Info
 
         Parameters
         ----------

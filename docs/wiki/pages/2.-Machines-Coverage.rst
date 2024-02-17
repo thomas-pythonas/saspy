@@ -1,0 +1,33 @@
+.. _2-machines:
+
+Machine Coverage
+===================================
+
+Preamble
+++++++++
+
+During our journey in building this library we came across few problems that we weren't able to understand. 
+
+Until we came to a proven fact that **EVERY vendor implements the SAS Protocol as they wish**. Basically, event tho this should be a STANDARD, many manufacturer do not follow this standard in it's entirety....giving you a lot of headache
+
+Vendor Covered
+++++++++
+
+
+* `EGT <https://www.egt.com/bg/>`_
+* `CTGaming <https://ctgaming.com/>`_
+* `Novomatic <https://www.novomatic.com/en>`_
+* `Amatic <https://www.amatic.com/products/>`_
+* `Merkur <https://www.merkur-casino.cz/en/vlt>`_
+
+Small Notes
+++++++++
+
+Even with machine from same vendor you could still have some trouble and you will be in need to adjust your code in order to have everything working. The reason for this is explained above in the preamble chapter.
+
+Machine Tested
+++++++++
+
+Make and Model on which this library has been tested on. Feel free to help expanding this list by creating a Pull Request :)
+
+(Coming Soon)

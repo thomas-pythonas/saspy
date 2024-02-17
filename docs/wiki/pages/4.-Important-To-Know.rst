@@ -1,0 +1,54 @@
+.. _4-important:
+
+Very Important to Know
+===================================
+
+AFT IN - Loading Credits
++++++++++++++++++++++++++
+
+On some machines you can call the function `aft_in <https://github.com/zacharytomlinson/saspy/blob/f9a2360634886d74c986d5dda0fd745806a8e755/sas.py#L1905>`_ without problem and charge money on your VLT.
+
+On others you might need to call `aft_clean_transaction_poll <https://github.com/zacharytomlinson/saspy/blob/f9a2360634886d74c986d5dda0fd745806a8e755/sas.py#L1999>`_ AFTER you send the ``aft_in`` command.
+
+..
+
+   A proper use of aft_clean_transaction_poll is to loop it. If it raises an error or returns 'Transfer pending (not complete)' you continue to execute until 'Full transfer successful'. Otherwise, you break the cycle and make the request invalid.
+
+
+Event Reporting
++++++++++++++++++++++++++
+
+Basically you have 2 ways: Standard event poll and real time event poll.
+
+The standard event poll works with a FIFO memory and in real world use cases is kinda useless (unless you need to store the history of this machine status). You can call this event simply using the ``event_poll`` method in the code.
+
+When you start the real time event reporting the machine, no matter what you ask, will always reply with the current event in the machine...leading to badcrc error and whatnot...plus the real time event responses are not mapped in the code (don't worry...im working on it). The function, in the code, to abilitate this is ``en_dis_rt_event_reporting``.
+
+Of course i needed the real time event reporting (to bind some actions) and at same time use some of the ``AFT_*`` functions in the code.
+
+To solve this issues i had to use the operator page on the machine to abilitate a second channel and buy a second prolific usb rs232 cable....
+
+In this way on a channel i abilitate the real time event reporting and on the second channel i could use the script normally (and the AFT functions) without problems.....
+
+Of course...this is a way created out of "no time"....if somebody has a better idea im all ear !
+
+Model Classes Notes
++++++++++++++++++++++++++
+
+Inside the classes in the folder ``models`` you will find all the machine responses mapped. So you know what the machine is telling you.
+
+Here some notes that is important to know.
+
+GPOLL
++++++++++++++++++++++++++
+
+**"4f": "Bill accepted"** 
+
+
+* Non-RTE mode: use this for all bills without explicit denomination. 
+* RTE mode: use for all bill denominations.
+
+**"50": "$200.00 bill accepted"**
+
+
+* Non-RTE only
