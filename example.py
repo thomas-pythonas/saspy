@@ -16,6 +16,7 @@ sas = Sas(
     pos_id=config_handler.get_config_value("machine", "pos_id"),
     key=config_handler.get_config_value("security", "key"),
     debug_level="DEBUG",
+    perpetual=config_handler.get_config_value("connection", "infinite"),
 )
 
 print(sas.start())

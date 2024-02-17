@@ -1,4 +1,6 @@
 # SASPY
+[![Documentation Status](https://readthedocs.org/projects/saspy/badge/?version=latest)](https://saspy.readthedocs.io/en/latest/?badge=latest)
+
 <p align="center">
 <img src="https://github.com/zacharytomlinson/saspy/assets/15037424/e8a8efc8-e83f-44f9-9ca1-7543a280e6b3" width="300" height="auto">
 </p>
@@ -10,7 +12,7 @@ This project, once reached a stable release, will be published on [PyPi](https:/
 # Documentation
 Since this library is still under heavy development (but at least is working !) comments are still not complete and there is a draft of documentation into `docs/` folder. 
 
-We are working hard to deliver also a readthedocs url.
+All the latest documentation regarding this library can be found on [Read The Docs](https://saspy.readthedocs.io/)
 
 In the meantime feel free to checkout the [WiKi of this project](https://github.com/zacharytomlinson/saspy/wiki) where you are gonna find response and solutions to common problems we faced during our journey
 

@@ -1,0 +1,80 @@
+.. _1-raspbery:
+
+Raspberry Limitation & How To Solve
+===================================
+The Raspberry present some challenges when comes to UART and Serial connections. In the specific:
+
+
+
+   The mini UART is a secondary low throughput UART intended to be used as a console. The mini Uart has the following features:
+
+       * 7 or 8 bit operation.
+       * 1 start and 1 stop bit.
+       * No parities.
+       * Break generation.
+       * 8 symbols deep FIFOs for receive and transmit.
+       * SW controlled RTS, SW readable CTS.
+       * Auto flow control with programmable FIFO level.
+       * 16550 like registers.
+       * Baudrate derived from system clock.
+
+
+As per SAS documentation, for the connection, you need:
+
+   19.2 KBaud in a "wakeup" mode. The 11-bit data packet consists of one start bit, eight data bits, a
+   ninth ‘wakeup’ bit, and one stop bit.
+
+
+As you can see, you will never be able to connect successfully to a machine using ONLY the Raspberry. Here how to solve this pickle.
+
+Solution 1
+----------
+
+Use an RS-232 to TTL logic level converter. We tested the `MAX3323 <https://www.mouser.com/ProductDetail/Analog-Devices-Maxim-Integrated/MAX3323EEPE%2b?qs=CDqwynd4ZNoRwc1iI5RFww%3D%3D>`_
+
+In case you decide to buy and use the MAX3323 remember to:
+1) Update your machine:
+
+.. code-block::
+
+   user@host $ sudo apt-get update
+   user@host $ sudo apt-get dist-upgrade
+   user@host $ sudo apt-get clean
+
+2) Enable UART in config and disable bluetooth
+
+.. code-block::
+
+   user@host $ echo "enable_uart=1" >> /boot/firmware/config.txt
+   user@host $ echo "dtoverlay=disable-bt" >> /boot/firmware/config.txt
+
+3) Disable getty (serial agent for console login)
+
+.. code-block::
+
+   user@host $ sudo systemctl disable serial-getty@ttyS0.service
+
+4) Ensure console is not set in cmdline.txt
+
+.. code-block::
+
+    user@host $ sudo nano /boot/firmware/cmdline.txt # Remove "console=serial0,115200" from text if applicable
+
+
+5) Reboot for changes to take effect 
+
+.. code-block::
+
+   user@host $ sudo reboot
+
+6) Configure serial connection to "serial0" port in config.yml (If you are using the default tx and rx pins on pi (8,10))
+
+.. code-block::
+
+   connection:
+     serial_port: /dev/serial0
+
+Solution 2
+----------
+
+Buy and use an USB to serial adapter, we tested this `one from Prolific <https://www.amazon.com/USB-Serial-Adapter-Prolific-PL-2303/dp/B00GRP8EZU/ref=sr_1_1_sspa?dib=eyJ2IjoiMSJ9.eT7IwLbFTyi5P6wiZqvnXrIsQpdtfPz_M46xtQa_S1I6h-lpFonAvq5YC5xJqm4vO8e3APmv6ZveRIHnEk3JvZ7RPORl8CFQWSUM226Dz0JssJAFQzWxU_Rk-YZaVXY5yPT9ZX-bqG0CDKUEzPruTJWEFg-ITUZtUOwr8KLTrvxvVg-ounmiZNAaizmQvxjrTdVozOF4iRbI5UF54oqfyn1obbD9whyaS_eGnl-TRcU.CRPZSqj6-D9E9pUJExtcBxGZd89oO6OAewGmvDxATTU&dib_tag=se&keywords=prolific%2Busb%2Bto%2Bserial&qid=1705598420&sr=8-1-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1>`_ and works like a charm and nothing has to be done on raspberry.

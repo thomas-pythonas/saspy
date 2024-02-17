@@ -1,4 +1,4 @@
-sas module
+SAS Class
 ==========
 
 .. automodule:: sas

@@ -24,16 +24,17 @@ class Sas:
     """Main SAS Library Class"""
 
     def __init__(
-        self,
-        port,  # Serial Port full Address
-        timeout=2,  # Connection timeout
-        poll_address=0x82,  # Poll Address
-        denom=0.01,  # Denomination
-        asset_number="01000000",  # Asset Number
-        reg_key="0000000000000000000000000000000000000000",  # Reg Key
-        pos_id="B374A402",  # Pos ID
-        key="44",  # Key
-        debug_level="DEBUG",  # Debug Level
+            self,
+            port,  # Serial Port full Address
+            timeout=2,  # Connection timeout
+            poll_address=0x82,  # Poll Address
+            denom=0.01,  # Denomination
+            asset_number="01000000",  # Asset Number
+            reg_key="0000000000000000000000000000000000000000",  # Reg Key
+            pos_id="B374A402",  # Pos ID
+            key="44",  # Key
+            debug_level="DEBUG",  # Debug Level
+            perpetual=False  # When this is true the lib will try forever to connect to the serial
     ):
         # Let's address some internal var
         self.poll_timeout = timeout
@@ -47,8 +48,9 @@ class Sas:
         self.transaction = None
         self.my_key = key
         self.poll_address = poll_address
+        self.perpetual = perpetual
 
-        # Let's Init the Logging system
+        # Init the Logging system
         self.log = log_to_stderr()
         self.log.setLevel(logging.getLevelName(debug_level))
 
@@ -65,26 +67,33 @@ class Sas:
                 self.log.info("Connection Successful")
                 break
             except:
+                if not self.perpetual:
+                    self.log.critical("Error while connecting to the machine....Quitting...")
+                    exit(1)  # Make a graceful exit since it's expected behaviour
+
                 self.log.critical("Error while connecting to the machine....")
                 time.sleep(1)
 
         return
 
     def is_open(self):
-        return self.connection.isOpen()
+        return self.connection.is_open
 
     def flush(self):
+        """Flush the serial buffer in input and output"""
         try:
             if not self.is_open():
                 self.open()
-            self.connection.flushOutput()
-            self.connection.flushInput()
+            self.connection.reset_output_buffer()
+            self.connection.reset_input_buffer()
         except Exception as e:
             self.log.error(e, exc_info=True)
 
         self.close()
 
     def start(self):
+        """Warm Up the connection to the VLT"""
+
         self.log.info("Connecting to the machine...")
         while True:
             if not self.is_open():
@@ -97,8 +106,8 @@ class Sas:
                 except Exception as e:
                     self.log.critical(e, exc_info=True)
             else:
-                self.connection.flushOutput()
-                self.connection.flushInput()
+                self.connection.reset_output_buffer()
+                self.connection.reset_input_buffer()
                 response = self.connection.read(1)
 
                 if not response:
@@ -118,78 +127,39 @@ class Sas:
         return self.machine_n
 
     def close(self):
+        """Close the connection to the serial port"""
         self.connection.close()
 
     def open(self):
+        """Open connection to the VLT"""
         try:
-            if self.connection.isOpen() is not True:
+            if self.connection.is_open is not True:
                 self.connection.open()
         except:
             raise SASOpenError
 
     def _conf_event_port(self):
+        """Do magick to make SAS Happy and work with their effing parity"""
         self.open()
-        # time.sleep(0.04)
         self.connection.flush()
         self.connection.timeout = self.poll_timeout
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
-        self.connection.flushInput()
+        self.connection.reset_input_buffer()
 
     def _conf_port(self):
+        """As per _conf_event_port Do magick to make SAS Happy and work with their effing parity"""
         self.open()
-        # time.sleep(0.04)
         self.connection.flush()
         self.connection.timeout = self.timeout
         self.connection.parity = serial.PARITY_MARK
         self.connection.stopbits = serial.STOPBITS_ONE
-        self.connection.flushInput()
-
-    @staticmethod
-    def _crc(response, chk=False, seed=0):
-        # Old CRC method. Its work but is slowly.
-        # --------------------------------------------------------------------------
-        # Use  crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
-        #        buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-        # --------------------------------------------------------------------------
-        c = ""
-        if chk:
-            crc = response[-4:]
-            response = response[:-4]
-
-        for x in response:
-            c = c + x
-            if len(c) == 2:
-                q = (seed ^ int(c, 16)) & 0o17
-                seed = (seed >> 4) ^ (q * 0o010201)
-                q = (seed ^ (int(c, 16) >> 4)) & 0o17
-                seed = (seed >> 4) ^ (q * 0o010201)
-                c = ""
-        data = hex(seed)
-        tmp = []
-        if len(data) == 5:
-            data = data[0:2] + "0" + data[2:]
-        elif len(data) == 4:
-            data = data[0:2] + "00" + data[2:]
-        elif len(data) == 3:
-            data = data[0:2] + "000" + data[2:]
-        elif len(data) == 2:
-            data = data[0:2] + "0000"
-        if not chk:
-            data = data[4:] + data[2:-2]
-        #            pass
-        else:
-            data = data[4:] + data[2:-2]
-            if data == chk:
-                return True
-            else:
-                raise BadCRC(response)
-
-        return data
+        self.connection.reset_input_buffer()
 
     def _send_command(
-        self, command, no_response=False, timeout=None, crc_need=True, size=1
+            self, command, no_response=False, timeout=None, crc_need=True, size=1
     ):
+        """Main function to physically send commands to the VLT"""
         try:
             buf_header = [self.address]
             self._conf_port()
@@ -201,10 +171,9 @@ class Sas:
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.connection.write([self.poll_address, self.address])
-            # self.close()
+
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
-            # self.open()
 
             self.connection.write((buf_header[1:]))
 
@@ -237,6 +206,7 @@ class Sas:
 
     @staticmethod
     def _check_response(rsp):
+        """Function in charge of the CRC Check"""
         if rsp == "":
             raise NoSasConnection
 
@@ -251,6 +221,12 @@ class Sas:
             return rsp[1:-2]
 
     def events_poll(self):
+        """Events Poll function
+
+        See Also
+        --------
+        WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
         self._conf_event_port()
 
         cmd = [0x80 + self.address]
@@ -269,6 +245,9 @@ class Sas:
         return event
 
     def shutdown(self):
+        """Make the VLT unplayable
+        :note: This is a LONG POLL COMMAND
+        """
         # [0x01]
         if self._send_command([0x01], True, crc_need=True) == self.address:
             return True
@@ -276,50 +255,120 @@ class Sas:
         return False
 
     def startup(self):
-        # [0x02]
+        """Synchronize to the host polling cycle
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x02], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def sound_off(self):
-        # [0x03]
+        """Disable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x03], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def sound_on(self):
-        # [0x04]
+        """Enable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x04], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def reel_spin_game_sounds_disabled(self):
-        # [0x05]
+        """Reel spin or game play sounds disabled
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x05], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def enable_bill_acceptor(self):
-        # [0x06]
+        """Enable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x06], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def disable_bill_acceptor(self):
-        # [0x07]
+        """Disable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x07], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def configure_bill_denom(
-        self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
+            self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
     ):
+        """Configure Bill Denominations
+
+        Parameters
+        ----------
+        bill_denom : dict
+            Bill denominations sent LSB first (0 = disable, 1 = enable)
+
+            =====  =====  ========  ========    =====
+            Bit    LSB    2nd Byte  3rd Byte    MSB
+            =====  =====  ========  ========    =====
+            0      $1     $200      $20000      TBD
+            1      $2     $250      $25000      TBD
+            2      $5     $500      $50000      TBD
+            3      $10    $1000     $100000     TBD
+            4      $20    $2000     $200000     TBD
+            5      $25    $2500     $250000     TBD
+            6      $50    $5000     $500000     TBD
+            7      $100   $10000    $1000000    TBD
+            =====  =====  ========  ========    =====
+
+        action_flag : dict
+            Action of bill acceptor after accepting a bill
+
+            =====  ===========
+            Bit    Description
+            =====  ===========
+            0      0 = Disable bill acceptor after each accepted bill
+
+                   1 = Keep bill acceptor enabled after each accepted bill
+            =====  ===========
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x08, 0x00]
         cmd.extend(bill_denom)
         cmd.extend(action_flag)
@@ -330,6 +379,22 @@ class Sas:
         return False
 
     def en_dis_game(self, game_number=None, en_dis=False):
+        """Enable or Disable a specific game
+
+        Parameters
+        ----------
+        game_number : bcd
+            0001-9999 Game number
+
+        en_dis : bool
+            Default is False. True enable a game | False disable it
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        """
         if not game_number:
             game_number = self.selected_game_number()
 
@@ -351,21 +416,48 @@ class Sas:
         return False
 
     def enter_maintenance_mode(self):
-        # [0x0A]
+        """Put the VLT in a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
         if self._send_command([0x0A], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def exit_maintenance_mode(self):
-        # [0x0B]
+        """Recover  the VLT from a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
         if self._send_command([0x0B], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def en_dis_rt_event_reporting(self, enable=False):
-        # 0E
+        """For situations where real time event reporting is desired, the gaming machine can be configured to report events in response to long polls as well as general polls. This allows events such as reel stops, coins in, game end, etc., to be reported in a timely manner
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            See Also
+            --------
+            WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
         if not enable:
             enable = [0]
         else:
@@ -380,6 +472,23 @@ class Sas:
         return False
 
     def send_meters_10_15(self, denom=True):
+        """Send meters 10 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x0F]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
@@ -428,7 +537,23 @@ class Sas:
         return None
 
     def total_cancelled_credits(self, denom=True):
-        # 10
+        """Send total cancelled credits meter 
+
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+            """
         cmd = [0x10]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -442,7 +567,22 @@ class Sas:
         return None
 
     def total_bet_meter(self, denom=True):
-        # 11
+        """Send total coin in meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x11]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -456,7 +596,22 @@ class Sas:
         return None
 
     def total_win_meter(self, denom=True):
-        # 12
+        """Send total coin out meter
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+            """
         cmd = [0x12]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -469,8 +624,23 @@ class Sas:
 
         return None
 
-    def total_in_meter(self, denom=True):
-        # 13
+    def total_drop_meter(self, denom=True):
+        """Send total drop meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x13]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -484,7 +654,22 @@ class Sas:
         return None
 
     def total_jackpot_meter(self, denom=True):
-        # 14
+        """Send total jackpot meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x14]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -498,7 +683,17 @@ class Sas:
         return None
 
     def games_played_meter(self):
-        # 15
+        """Send games played meter
+
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x15]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -507,7 +702,22 @@ class Sas:
         return None
 
     def games_won_meter(self, denom=True):
-        # 16
+        """Send games won meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x16]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -521,7 +731,16 @@ class Sas:
         return None
 
     def games_lost_meter(self):
-        # 17
+        """Send games won meter
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x17]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -530,7 +749,17 @@ class Sas:
         return None
 
     def games_powerup_door_opened(self):
-        # 18
+        """Send meters 10 through 15
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x18]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -545,7 +774,23 @@ class Sas:
         return None
 
     def meters_11_15(self, denom=True):
-        # 19
+        """Send meters 11 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x19]
         data = self._send_command(cmd, crc_need=False, size=24)
         if data:
@@ -586,7 +831,23 @@ class Sas:
         return None
 
     def current_credits(self, denom=True):
-        # 1A
+        """Send current credits
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            round | int | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -600,7 +861,17 @@ class Sas:
         return None
 
     def handpay_info(self):
-        # 1B
+        """Send handpay information
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Warning: is missing 2-byte BCD Partial pay amount @todo FIX ME !
+        """
         cmd = [0x1B]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -621,7 +892,23 @@ class Sas:
         return None
 
     def meters(self, denom=True):
-        # 1C
+        """Send Meters
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters (in int or float) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1C]
         data = self._send_command(cmd, crc_need=False, size=36)
         if data:
@@ -632,7 +919,7 @@ class Sas:
                 Meters.Meters.STATUS_MAP["total_win_meter"] = int(
                     binascii.hexlify(bytearray(data[5:9]))
                 )
-                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = int(
                     binascii.hexlify(bytearray(data[9:13]))
                 )
                 Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
@@ -657,7 +944,7 @@ class Sas:
                 Meters.Meters.STATUS_MAP["total_win_meter"] = round(
                     int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
                 )
-                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = round(
                     int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
                 )
                 Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
@@ -681,7 +968,17 @@ class Sas:
         return None
 
     def total_bill_meters(self):
-        # 1E
+        """Send total bill meters (# of bills)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1E]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
@@ -709,9 +1006,26 @@ class Sas:
         return None
 
     def gaming_machine_id(self):
-        """
+        """Gaming machine information command
         @todo Check this one...something smell bad
-        :return:
+
+        According to doc:
+            =====================  ======  =================  ========================================================================================================================================
+            Field                  Bytes   Value              Description
+            =====================  ======  =================  ========================================================================================================================================
+            Address                1       binary 01-7F       Address of gaming machine responding
+            Command                1       binary 1F          Gaming machine information command
+            Game ID                2       ASCII ??           Game ID in ASCII. (see Table C-1 in Appendix C)
+            Additional ID          3       ASCII ???          Additional game ID in ASCII. If the gaming machine does not support an additional ID, this field should be padded with ASCII "0"s.
+            Denomination           1       binary 00-FF       Binary number representing the SAS accounting denomination of this gaming machine
+            Max bet                1       binary 01-FF       Largest configured max bet for the gaming machine, or FF if largest configured max bet greater than or equal to 255
+            Progressive Group      1       binary 00-FF       Current configured progressive group for the gaming machine
+            Game options           2       binary 0000-FFFF   Game options selected by the operator. The bit configurations are dependent upon the type of gaming machine.
+            Paytable ID            6       ASCII ??????       Paytable ID in ASCII
+            Base %                 4       ASCII ??.??        Theoretical base pay back percentage for maximum bet in ASCII. The decimal is implied and NOT transmitted.
+            CRC                    2       binary 0000-FFFF   16-bit CRC
+            =====================  ======  =================  ========================================================================================================================================
+
         """
         # 1F
         cmd = [0x1F]
@@ -734,7 +1048,17 @@ class Sas:
         return None
 
     def total_dollar_value_of_bills_meter(self):
-        # 20
+        """Send total dollar value of bills meter
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x20]
         data = self._send_command(cmd, crc_need=False, size=8)
 
@@ -744,7 +1068,17 @@ class Sas:
         return None
 
     def rom_signature_verification(self):
-        # 21
+        """ROM Signature Verification
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x21, 0x00, 0x00]
         data = self._send_command(cmd, crc_need=True)
         if data:
@@ -752,45 +1086,56 @@ class Sas:
 
         return None
 
-    def eft_button_pressed(self, state=0):
-        # 24
-        cmd = [0x24, 0x03, state]
-        data = self._send_command(cmd, crc_need=True)
-        if data:
-            return data
+    def true_coin_in(self):
+        """Send true coin in
 
-        return None
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
 
-    def true_coin_in(self, denom=True):
-        # 2A
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2A]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            if not denom:
-                return int(binascii.hexlify(bytearray(data[1:5])))
-            else:
-                return round(
-                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
-                )
+            return int(binascii.hexlify(bytearray(data[1:5])))
 
         return None
 
-    def true_coin_out(self, denom=True):
-        # 2B
+    def true_coin_out(self):
+        """Send true coin out
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2B]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            if not denom:
-                return int(binascii.hexlify(bytearray(data[1:5])))
-            else:
-                return round(
-                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
-                )
+            return int(binascii.hexlify(bytearray(data[1:5])))
 
         return None
 
     def curr_hopper_level(self):
-        # 2C
+        """Send current hopper level
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2C]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -799,7 +1144,14 @@ class Sas:
         return None
 
     def total_hand_paid_cancelled_credit(self):
-        # 2D
+        """Send total hand paid cancelled credits
+
+        Notes
+        -------
+        WARNING ! @todo i return: 2-byte BCD game number and 4-byte BCD meter in SAS accounting denom units. Therefore this code is WRONG
+
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2D]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -808,13 +1160,27 @@ class Sas:
         return None
 
     def delay_game(self, delay_time=100):
-        # 2E
+        """Delay Game
+        Parameters
+        ----------
+        delay_time : int
+            How long in ms to delay a game
+            
+        Returns
+        -------
+        bool
+            True for a successful operation, False otherwise
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         delay_time = str(delay_time)
         delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
         cmd = [0x2E]
         count = 0
         for i in range(len(delay_fmt) // 2):
-            cmd.append(int(delay_fmt[count : count + 2], 16))
+            cmd.append(int(delay_fmt[count: count + 2], 16))
             count += 2
         if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
@@ -825,10 +1191,21 @@ class Sas:
     def selected_meters_for_game():
         # 2F
         # TODO: selected_meters_for_game
+        # As per above...NOT ME ! @well-it-wasnt-me
         return None
 
     def send_1_bills_in_meters(self):
-        # 31
+        """Send 1$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x31]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -837,7 +1214,17 @@ class Sas:
         return None
 
     def send_2_bills_in_meters(self):
-        # 32
+        """Send 2$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x32]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -846,7 +1233,17 @@ class Sas:
         return None
 
     def send_5_bills_in_meters(self):
-        # 33
+        """Send 5$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x33]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -855,7 +1252,17 @@ class Sas:
         return None
 
     def send_10_bills_in_meters(self):
-        # 34
+        """Send 10$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x34]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -864,7 +1271,17 @@ class Sas:
         return None
 
     def send_20_bills_in_meters(self):
-        # 35
+        """Send 20$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x35]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -873,7 +1290,17 @@ class Sas:
         return None
 
     def send_50_bills_in_meters(self):
-        # 36
+        """Send 50$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x36]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -882,7 +1309,17 @@ class Sas:
         return None
 
     def send_100_bills_in_meters(self):
-        # 37
+        """Send 100$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x37]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -891,7 +1328,17 @@ class Sas:
         return None
 
     def send_500_bills_in_meters(self):
-        # 38
+        """Send 500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x38]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -900,7 +1347,17 @@ class Sas:
         return None
 
     def send_1000_bills_in_meters(self):
-        # 39
+        """Send 1.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x39]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -909,7 +1366,17 @@ class Sas:
         return None
 
     def send_200_bills_in_meters(self):
-        # 3A
+        """Send 200$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -918,7 +1385,17 @@ class Sas:
         return None
 
     def send_25_bills_in_meters(self):
-        # 3B
+        """Send 25$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3B]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -927,7 +1404,17 @@ class Sas:
         return None
 
     def send_2000_bills_in_meters(self):
-        # 3C
+        """Send 2.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3C]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -935,7 +1422,17 @@ class Sas:
         return None
 
     def cash_out_ticket_info(self):
-        # 3D
+        """Send cash out ticket information
+
+        Returns
+        -------
+        mixed
+            dict or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3D]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -947,7 +1444,17 @@ class Sas:
         return None
 
     def send_2500_bills_in_meters(self):
-        # 3E
+        """Send 2.500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3E]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -956,7 +1463,17 @@ class Sas:
         return None
 
     def send_5000_bills_in_meters(self):
-        # 3F
+        """Send 5.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3F]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -965,7 +1482,17 @@ class Sas:
         return None
 
     def send_10000_bills_in_meters(self):
-        # 40
+        """Send 10.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x40]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -974,7 +1501,17 @@ class Sas:
         return None
 
     def send_20000_bills_in_meters(self):
-        # 41
+        """Send 20.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x41]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -983,7 +1520,17 @@ class Sas:
         return None
 
     def send_25000_bills_in_meters(self):
-        # 42
+        """Send 25.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x42]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -992,7 +1539,17 @@ class Sas:
         return None
 
     def send_50000_bills_in_meters(self):
-        # 43
+        """Send 50.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x43]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1001,7 +1558,17 @@ class Sas:
         return None
 
     def send_100000_bills_in_meters(self):
-        # 44
+        """Send 100.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x44]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1010,7 +1577,17 @@ class Sas:
         return None
 
     def send_250_bills_in_meters(self):
-        # 45
+        """Send 250$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x45]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1019,7 +1596,14 @@ class Sas:
         return None
 
     def credit_amount_of_all_bills_accepted(self):
-        # 46
+        """Send credit amount of all bills accepted
+
+        Returns
+        -------
+        mixed
+            meter in SAS accounting denom units or None
+
+        """
         cmd = [0x46]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1028,7 +1612,14 @@ class Sas:
         return None
 
     def coin_amount_accepted_from_external_coin_acceptor(self):
-        # 47
+        """Send coin amount accepted from an external coin acceptor
+
+        Returns
+        -------
+        mixed
+             meter in SAS accounting denom units or None
+
+        """
         cmd = [0x47]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1037,7 +1628,12 @@ class Sas:
         return None
 
     def last_accepted_bill_info(self):
-        # 48
+        """ Send last accepted bill information
+        Returns
+        -------
+        mixed
+            dict or None
+        """
         cmd = [0x48]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -1055,7 +1651,12 @@ class Sas:
         return None
 
     def number_of_bills_currently_in_stacker(self):
-        # 49
+        """ Send number of bills currently in the stacker
+        Returns
+        -------
+        mixed
+            int ( meter in # of bills )  or None
+        """
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1064,8 +1665,18 @@ class Sas:
         return None
 
     def total_credit_amount_of_all_bills_in_stacker(self):
-        # 4A
-        cmd = [0x49]
+        """Send total credit amount of all bills currently in the stacker
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x4A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
@@ -1073,7 +1684,7 @@ class Sas:
         return None
 
     def set_secure_enhanced_validation_id(
-        self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
+            self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
     ):
         """
         For a gaming machine to perform secure enhanced ticket/receipt/handpay validation, the host must use
@@ -1082,13 +1693,12 @@ class Sas:
         machine validation ID of zero. If a gaming machine is not configured to perform secure enhanced
         validation, or is responding to a host that is not the validation controller, it ignores this long poll
 
-        :param machine_id:
-        :param seq_num:
-        :param kwargs:
+        :param machine_id: 3 binary - Gaming machine validation ID number
+        :param seq_num: 3 binary - Starting sequence number (incremented before being assigned to each event)
         :return:
         """
         # 4C
-        # FIXME: set_secure_enhanced_validation_ID
+        # FIXME: set_secure_enhanced_validation_ID @todo... im beat...@well-it-wasnt-me
         cmd = [0x4C, machine_id, seq_num]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
@@ -1103,7 +1713,18 @@ class Sas:
         return None
 
     def enhanced_validation_information(self, curr_validation_info=0):
-        # 4D
+        """Send Enhanced Validation Information Command
+
+        Parameters
+        ----------
+        curr_validation_info :
+            Function code; 00 = read current validation info | 01-1F = validation info from buffer index n | FF = look ahead at current validation info
+
+        Returns
+        -------
+        mixed :
+            dict | none
+        """
         # FIXME: enhanced_validation_information
         cmd = [0x4D, curr_validation_info]
         data = self._send_command(cmd, True, crc_need=True)
@@ -1123,7 +1744,7 @@ class Sas:
             TitoStatement.Tito.STATUS_MAP["validation_number"] = str(
                 binascii.hexlify(bytearray(data[10:18]))
             )
-            TitoStatement.Tito.STATUS_MAP["ticket_amount"] = int(
+            TitoStatement.Tito.STATUS_MAP["amount"] = int(
                 binascii.hexlify(bytearray(data[18:23]))
             )
             TitoStatement.Tito.STATUS_MAP["ticket_number"] = int(
@@ -1144,15 +1765,54 @@ class Sas:
         return None
 
     def current_hopper_status(self):
-        # 4F
+        """Send Current Hopper Status
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        ------
+        Understanding the values:
+
+        - current_hopper_length
+        ==============      =====
+        Code (Binary)       Description
+        ==============      =====
+        02                   Only status and % full
+        06                   Status, % full and level
+        ==============      =====
+
+        - current_hopper_status
+        ==============      =====
+        Code (Binary)       Status
+        ==============      =====
+        00                   Hopper OK
+        01                   Flooded Optics
+        02                   Reverse Coin
+        03                   Coin too short
+        04                   Coin Jam
+        05                   Hopper runaway
+        06                   Optics Disconnected
+        07                   Hopper Empty
+        08-FE                Reserved
+        FF                   Other
+        ==============      =====
+
+        - current_hopper_percent_full :
+            Current hopper level as 0-100%, or FF if unable to detect hopper level percentage
+
+        - current_hopper_level :
+            4 BCD | Current hopper level in number of coins/tokens, only if EGM able to detect
+        """
         # FIXME: current_hopper_status
         cmd = [0x4F]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
-            Meters.Meters.STATUS_MAP["current_hopper_lenght"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_length"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
-            Meters.Meters.STATUS_MAP["current_hopper_ststus"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_status"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
             Meters.Meters.STATUS_MAP["current_hopper_percent_full"] = int(
@@ -1166,7 +1826,45 @@ class Sas:
         return None
 
     def validation_meters(self, type_of_validation=0x00):
-        # 50
+        """Send validation meters
+        Parameters
+        ----------
+        type_of_validation : int
+            Type of validation
+
+            ==============      =====
+            Code (Binary)       Validation type
+            ==============      =====
+            00                   Cashable ticket from cashout or win, no handpay lockup
+            01                   Restricted promotional ticket from cashout
+            02                   Cashable ticket from AFT transfer
+            03                   Restricted ticket from AFT transfer
+            04                   Debit ticket from AFT transfer
+            10                   Cancelled credit handpay (receipt printed
+            20                   Jackpot handpay (receipt printed)
+            40                   Cancelled credit handpay (no receipt)
+            60                   Jackpot handpay (no receipt)
+            80                   Cashable ticket redeemed
+            81                   Restricted promotional ticket redeemed
+            82                   Nonrestricted promotional ticket redeemed
+            ==============      =====
+
+
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        -------
+        Understanding the response:
+            - bin_validation_type :
+                See the table "Type of validation"
+            - total_validations : 4 BCD
+                Total number of validations of type
+            - cumulative_amount : 5 BCD
+                Cumulative validation amount in units of cents
+        """
         # FIXME: validation_meters
         cmd = [0x50, type_of_validation]
         data = self._send_command(cmd, True, crc_need=True)
@@ -1287,12 +1985,13 @@ class Sas:
         This function should be checked at begin in order to address
         the changes from sas v6.02 and 6.03
         - Antonio
+        @todo...one day i'll see to this....
         """
         cmd = [0x54, 0x00]
         data = self._send_command(cmd, crc_need=False, size=20)
         if data:
             Meters.Meters.STATUS_MAP["ASCII_SAS_version"] = (
-                int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
+                    int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
             )
             Meters.Meters.STATUS_MAP["ASCII_serial_number"] = str(bytearray(data[5:]))
             return Meters.Meters.get_non_empty_status_map()
@@ -1341,69 +2040,89 @@ class Sas:
 
         return None
 
-    def validation_number(self, validation_id=1, valid_number=0):
-        # 58
-        cmd = [0x58, validation_id, self._bcd_coder_array(valid_number, 8)]
+    def rcv_validation_number(self, validation_id=1, valid_number=0):
+        """Receive Validation number
+        Parameters
+        ----------
+        validation_id : int
+            Validation System ID Code (00 = system validation denied)
+
+        valid_number : int
+            validation number to use for cashout (not used if validation denied)
+
+        Returns
+        -------
+        Mixed
+            str | none - 00 = command ack | 80 = Not in cashout | 81 = Improper validation rejected
+        """
+        cmd = [0x58, self._bcd_coder_array(validation_id, 1), self._bcd_coder_array(valid_number, 8)]
         data = self._send_command(cmd, crc_need=True)
         if data:
             return str(binascii.hexlify(bytearray(data[1])))
 
         return None
 
-    """
-    def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
-        # 63
-        # FIXME: eft_send_promo_to_machine
-        cmd = [0x63, count, status, self._bcd_coder_array(amount, 4)]
-        # status 0-init 1-end
-        data = self._send_command(cmd, crc_need=True)
-        if data:
-            EftStatement.eft_status = str(
-                binascii.hexlify(bytearray(data[1:]))
-            )
-            EftStatement.promo_amount = str(
-                binascii.hexlify(bytearray(data[4:]))
-            )
-            # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-            return EftStatement
-
-        return None
-
-    def eft_load_cashable_credits(self, amount=0, count=1, status=0, **kwargs):
-        # 69
-        # FIXME: eft_load_cashable_credits
-        cmd = [0x69, count, status, self._bcd_coder_array(amount, 4)]
-        data = self._send_command(cmd, True, crc_need=True)
-        if data:
-            meters["eft_status"] = str(binascii.hexlify(bytearray(data[1:2])))
-            meters["cashable_amount"] = str(binascii.hexlify(bytearray(data[2:5])))
-            return data[3]
-
-        return None
-
-    def eft_available_transfers(self, **kwargs):
-        # 6A
-        # FIXME: eft_load_cashable_credits
-        cmd = [0x6A]
-        data = self._send_command(cmd, True, crc_need=False)
-        if data:
-            # meters['number_bills_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
-            return data
-
-        return None
-    """
-
     def authentication_info(
-        self,
-        action=0,
-        addressing_mode=0,
-        component_name="",
-        auth_method=b"\x00\x00\x00\x00",
-        seed="",
-        seed_length=0,
-        offset="",
-        offset_length=0,
+            self,
+            action=0,
+            addressing_mode=0,
+            component_name="",
+            auth_method=b"\x00\x00\x00\x00",
+            seed="",
+            seed_length=0,
+            offset="",
+            offset_length=0,
     ):
+        """Authentication Info
+
+        Parameters
+        ----------
+        action : 1 binary
+            Requested authentication action:
+
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Interrogate number of installed components
+            01      Read status of component (address required)
+            02      Authenticate component (address required)
+            03      Interrogate authentication status
+            =====  =====
+
+        addressing_mode : 1 binary
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Addressing by component index number
+            01      Addressing by component name
+            =====  =====
+
+        component_name : x bytes
+            ASCII component name if addressing mode = 01
+
+        auth_method : 4 binary
+            ==============      ============    ======================  =======================
+            Code (Binary)       Method          Seed size (max bytes)   Result Size (max bytes)
+            ==============      ============    ======================  =======================
+            00000000            None            n/a                     n/a
+            00000001            CRC16           2 binary                2 binary
+            00000002            CRC32           4 binary                4 binary
+            00000004            MD5             16 bytes                16 bytes
+            00000008            Kobetron I      4 ASCII                 4 ASCII
+            00000010            Kobetron II     4 ASCII                 4 ASCII
+            00000020            SHA1            20 Bytes                20 Bytes
+            ==============      ============    ======================  =======================
+
+        Returns
+        -------
+        bytearray
+            Response ACK/NACK
+
+        Notes
+        -------
+        Actually the real response is way more long and complex. Planning to map and implement it in the future
+
+        """
         # 6E
         # FIXME: authentication_info
         cmd = [0x6E, 0x00, action]
@@ -1427,10 +2146,10 @@ class Sas:
                     cmd.append(bytearray(offset))
 
                     cmd[1] = (
-                        len(bytearray(offset))
-                        + len(bytearray(seed))
-                        + len(bytearray(component_name))
-                        + 6
+                            len(bytearray(offset))
+                            + len(bytearray(seed))
+                            + len(bytearray(component_name))
+                            + 6
                     )
 
         data = self._send_command(cmd, True, crc_need=True)
@@ -1448,6 +2167,11 @@ class Sas:
     def ticket_validation_data(self):
         # 70
         # FIXME: ticket_validation_data
+        # @todo This is wrong for sure....this should reply 9 BCD BCD-encoded 18 digit decimal validation number. The first two digits are a 2
+        # digit system ID code indicating how to interpret the following 16 digits.
+        # System ID code 00 indicates that the following 16 digits represent a SAS
+        # secure enhanced validation number. Other system ID codes and parsing codes
+        # will be assigned by IGT as needed
         cmd = [0x70]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
@@ -1468,13 +2192,13 @@ class Sas:
         return None
 
     def redeem_ticket(
-        self,
-        transfer_code=0,
-        transfer_amount=0,
-        parsing_code=0,
-        validation_data=0,
-        restricted_expiration=0,
-        pool_id=0
+            self,
+            transfer_code=0,
+            transfer_amount=0,
+            parsing_code=0,
+            validation_data=0,
+            restricted_expiration=0,
+            pool_id=0
     ):
         # 71
         # FIXME: redeem_ticket
@@ -1490,10 +2214,10 @@ class Sas:
         ]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            Meters.Meters.STATUS_MAP["ticket_status"] = int(
+            Meters.Meters.STATUS_MAP["machine_status"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
-            Meters.Meters.STATUS_MAP["ticket_amount"] = int(
+            Meters.Meters.STATUS_MAP["transfer_amount"] = int(
                 binascii.hexlify(bytearray(data[3:8]))
             )
             Meters.Meters.STATUS_MAP["parsing_code"] = int(
@@ -1544,8 +2268,8 @@ class Sas:
 
         last_transaction = self.aft_format_transaction()
         len_transaction_id = hex(len(last_transaction) // 2)[
-            2:
-        ]  # the division result should be converted to an integer before using hex, added extra / to solve this
+                             2:
+                             ]  # the division result should be converted to an integer before using hex, added extra / to solve this
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -1569,9 +2293,9 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(
-            len(cmd) // 2
+                len(cmd) // 2
         ):  # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -1598,17 +2322,17 @@ class Sas:
                     binascii.hexlify(bytearray(data[5:6]))
                 ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                * self.denom,
+                                   * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                * self.denom,
+                                     * self.denom,
                 "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
-                * self.denom,
+                                        * self.denom,
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
                 "Transaction ID": binascii.hexlify(
-                    bytearray(data[27 : (27 + a)])
-                ),  # WARNING: technically should be (27 + 2 * a) due to an off error....
+                    bytearray(data[27: (27 + a)])
+                ),  # WARNING: technically should be (27 + 2 * a) due to an off error.... @todo...somebody see me !
             }
         try:
             self.aft_unregister()
@@ -1673,7 +2397,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -1699,17 +2423,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
@@ -1756,7 +2480,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         self.aft_register()
@@ -1781,17 +2505,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.critical(e, exc_info=True)
@@ -1806,7 +2530,7 @@ class Sas:
         return True
 
     def aft_won(
-        self, money="0000000000", amount=1, games=None, lock_timeout=0
+            self, money="0000000000", amount=1, games=None, lock_timeout=0
     ):
         money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
@@ -1862,7 +2586,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -1888,17 +2612,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
@@ -1959,7 +2683,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         try:
@@ -1981,17 +2705,17 @@ class Sas:
                         [binascii.hexlify(bytearray(data[5:6]))]
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
 
                 self.aft_unregister()
@@ -2017,7 +2741,7 @@ class Sas:
         count = 0
         new_cmd = []
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -2037,17 +2761,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
 
             if register:
@@ -2075,21 +2799,21 @@ class Sas:
         return False
 
     def aft_transfer_funds(
-        self,
-        transfer_code=0x00,
-        transaction_index=0x00,
-        transfer_type=0x00,
-        cashable_amount=0,
-        restricted_amount=0,
-        non_restricted_amount=0,
-        transfer_flags=0x00,
-        asset_number=b"\x00\x00\x00\x00\x00",
-        registration_key=0,
-        transaction_id="",
-        expiration=0,
-        pool_id=0,
-        receipt_data="",
-        lock_timeout=0
+            self,
+            transfer_code=0x00,
+            transaction_index=0x00,
+            transfer_type=0x00,
+            cashable_amount=0,
+            restricted_amount=0,
+            non_restricted_amount=0,
+            transfer_flags=0x00,
+            asset_number=b"\x00\x00\x00\x00\x00",
+            registration_key=0,
+            transaction_id="",
+            expiration=0,
+            pool_id=0,
+            receipt_data="",
+            lock_timeout=0
     ):
         # 72
         cmd = [
@@ -2146,43 +2870,43 @@ class Sas:
             )
             a = int(binascii.hexlify(bytearray(data[26:27])))
             AftStatements.AftStatements.STATUS_MAP["transaction_id"] = str(
-                binascii.hexlify(bytearray(data[27 : (27 + a + 1)]))
+                binascii.hexlify(bytearray(data[27: (27 + a + 1)]))
             )
             a = 27 + a + 1
             AftStatements.AftStatements.STATUS_MAP["transaction_date"] = str(
-                binascii.hexlify(bytearray(data[a : a + 5]))
+                binascii.hexlify(bytearray(data[a: a + 5]))
             )
             a = a + 5
             AftStatements.AftStatements.STATUS_MAP["transaction_time"] = str(
-                binascii.hexlify(bytearray(data[a : a + 4]))
+                binascii.hexlify(bytearray(data[a: a + 4]))
             )
             AftStatements.AftStatements.STATUS_MAP["expiration"] = str(
-                binascii.hexlify(bytearray(data[a + 4 : a + 9]))
+                binascii.hexlify(bytearray(data[a + 4: a + 9]))
             )
             AftStatements.AftStatements.STATUS_MAP["pool_id"] = str(
-                binascii.hexlify(bytearray(data[a + 9 : a + 11]))
+                binascii.hexlify(bytearray(data[a + 9: a + 11]))
             )
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_cashable_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[a + 11 : a + 12]))
-            b = a + int(binascii.hexlify(bytearray(data[a + 11 : a + 12])))
+            ] = binascii.hexlify(bytearray(data[a + 11: a + 12]))
+            b = a + int(binascii.hexlify(bytearray(data[a + 11: a + 12])))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_cashable_amount_meter"
-            ] = binascii.hexlify(bytearray(data[a + 12 : b + 1]))
+            ] = binascii.hexlify(bytearray(data[a + 12: b + 1]))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_restricted_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[b + 1 : b + 2]))
-            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1 : b + 2])))
+            ] = binascii.hexlify(bytearray(data[b + 1: b + 2]))
+            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1: b + 2])))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_restricted_amount_meter"
-            ] = binascii.hexlify(bytearray(data[b + 2 : c]))
+            ] = binascii.hexlify(bytearray(data[b + 2: c]))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_nonrestricted_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[c : c + 1]))
-            b = int(binascii.hexlify(bytearray(data[c : c + 1]))) + c
+            ] = binascii.hexlify(bytearray(data[c: c + 1]))
+            b = int(binascii.hexlify(bytearray(data[c: c + 1]))) + c
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_nonrestricted_amount_meter"
-            ] = binascii.hexlify(bytearray(data[c + 1 :]))
+            ] = binascii.hexlify(bytearray(data[c + 1:]))
 
             return AftStatements.AftStatements.get_non_empty_status_map()
 
@@ -2197,7 +2921,7 @@ class Sas:
                     raise ValueError
 
                 count = int(binascii.hexlify(data[26:27]), 16)
-                transaction = binascii.hexlify(data[27 : 27 + count])
+                transaction = binascii.hexlify(data[27: 27 + count])
                 if transaction == "2121212121212121212121212121212121":
                     transaction = "2020202020202020202020202020202021"
                 self.transaction = int(transaction, 16)
@@ -2232,7 +2956,7 @@ class Sas:
         count = 0
         tmp = []
         for i in range(len(transaction) // 2):
-            tmp.append(transaction[count : count + 2])
+            tmp.append(transaction[count: count + 2])
             count += 2
 
         tmp.reverse()
@@ -2276,7 +3000,7 @@ class Sas:
             cmd[1] = 0x1D
             count = 0
             for i in range(len(tmp) // 2):
-                cmd.append(int(tmp[count : count + 2], 16))
+                cmd.append(int(tmp[count: count + 2], 16))
                 count += 2
 
         data = self._send_command(cmd, crc_need=True, size=34)
@@ -2305,7 +3029,7 @@ class Sas:
         return self.aft_game_lock_and_status_request(lock_code=0x80)
 
     def aft_game_lock_and_status_request(
-        self, lock_code=0x00, transfer_condition=00, lock_timeout=0
+            self, lock_code=0x00, transfer_condition=00, lock_timeout=0
     ):
         # 74
         cmd = [
@@ -2374,15 +3098,15 @@ class Sas:
                     binascii.hexlify(bytearray(data[5:6]))
                 ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                * self.denom,
+                                   * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                * self.denom,
+                                     * self.denom,
                 "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
-                * self.denom,
+                                        * self.denom,
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
             }
         try:
             self.aft_unregister()
@@ -2403,11 +3127,11 @@ class Sas:
         return NotImplemented
 
     def extended_validation_status(
-        self,
-        control_mask=[0, 0],
-        status_bits=[0, 0],
-        cashable_ticket_receipt_exp=0,
-        restricted_ticket_exp=0
+            self,
+            control_mask=[0, 0],
+            status_bits=[0, 0],
+            cashable_ticket_receipt_exp=0,
+            restricted_ticket_exp=0
     ):
         # 7B
         cmd = [
@@ -2462,7 +3186,7 @@ class Sas:
         fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
         count = 0
         for i in range(len(fmt_cmd) // 2):
-            cmd.append(int(fmt_cmd[count : count + 2], 16))
+            cmd.append(int(fmt_cmd[count: count + 2], 16))
             count += 2
 
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -2522,7 +3246,7 @@ class Sas:
         cmd = [0x8A]
         count = 0
         for i in range(len(t_cmd) // 2):
-            cmd.append(int(t_cmd[count : count + 2], 16))
+            cmd.append(int(t_cmd[count: count + 2], 16))
             count += 2
 
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -2680,7 +3404,7 @@ class Sas:
                 GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 0
 
             GameFeatures.GameFeatures.STATUS_MAP["validation_style"] = (
-                data[3] & 0b01100000 >> 5
+                    data[3] & 0b01100000 >> 5
             )
 
             if data[3] & 0b10000000:

@@ -1,0 +1,21 @@
+.. _3-howto:
+
+How To
+===================================
+
+Requirements
+++++++++++++++
+
+* Python 3.10+
+* PIP
+
+Clone and Run
+++++++++++++++
+
+.. code-block:: bash
+
+   $ git clone https://github.com/zacharytomlinson/saspy.git
+   $ cd saspy
+   $ pip install -r requirements.txt
+   $ nano config.yml # Adjust according your needs
+   $ python example.py # To check that everything works
