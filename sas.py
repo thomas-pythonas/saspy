@@ -80,6 +80,7 @@ class Sas:
         return self.connection.is_open
 
     def flush(self):
+        """Flush the serial buffer in input and output"""
         try:
             if not self.is_open():
                 self.open()
@@ -91,6 +92,8 @@ class Sas:
         self.close()
 
     def start(self):
+        """Warm Up the connection to the VLT"""
+
         self.log.info("Connecting to the machine...")
         while True:
             if not self.is_open():
@@ -124,78 +127,39 @@ class Sas:
         return self.machine_n
 
     def close(self):
+        """Close the connection to the serial port"""
         self.connection.close()
 
     def open(self):
+        """Open connection to the VLT"""
         try:
-            if self.connection.isOpen() is not True:
+            if self.connection.is_open is not True:
                 self.connection.open()
         except:
             raise SASOpenError
 
     def _conf_event_port(self):
+        """Do magick to make SAS Happy and work with their effing parity"""
         self.open()
-        # time.sleep(0.04)
         self.connection.flush()
         self.connection.timeout = self.poll_timeout
         self.connection.parity = serial.PARITY_NONE
         self.connection.stopbits = serial.STOPBITS_TWO
-        self.connection.flushInput()
+        self.connection.reset_input_buffer()
 
     def _conf_port(self):
+        """As per _conf_event_port Do magick to make SAS Happy and work with their effing parity"""
         self.open()
-        # time.sleep(0.04)
         self.connection.flush()
         self.connection.timeout = self.timeout
         self.connection.parity = serial.PARITY_MARK
         self.connection.stopbits = serial.STOPBITS_ONE
-        self.connection.flushInput()
-
-    @staticmethod
-    def _crc(response, chk=False, seed=0):
-        # Old CRC method. Its work but is slowly.
-        # --------------------------------------------------------------------------
-        # Use  crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
-        #        buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-        # --------------------------------------------------------------------------
-        c = ""
-        if chk:
-            crc = response[-4:]
-            response = response[:-4]
-
-        for x in response:
-            c = c + x
-            if len(c) == 2:
-                q = (seed ^ int(c, 16)) & 0o17
-                seed = (seed >> 4) ^ (q * 0o010201)
-                q = (seed ^ (int(c, 16) >> 4)) & 0o17
-                seed = (seed >> 4) ^ (q * 0o010201)
-                c = ""
-        data = hex(seed)
-        tmp = []
-        if len(data) == 5:
-            data = data[0:2] + "0" + data[2:]
-        elif len(data) == 4:
-            data = data[0:2] + "00" + data[2:]
-        elif len(data) == 3:
-            data = data[0:2] + "000" + data[2:]
-        elif len(data) == 2:
-            data = data[0:2] + "0000"
-        if not chk:
-            data = data[4:] + data[2:-2]
-        #            pass
-        else:
-            data = data[4:] + data[2:-2]
-            if data == chk:
-                return True
-            else:
-                raise BadCRC(response)
-
-        return data
+        self.connection.reset_input_buffer()
 
     def _send_command(
         self, command, no_response=False, timeout=None, crc_need=True, size=1
     ):
+        """Main function to physically send commands to the VLT"""
         try:
             buf_header = [self.address]
             self._conf_port()
@@ -207,10 +171,9 @@ class Sas:
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
             self.connection.write([self.poll_address, self.address])
-            # self.close()
+
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
-            # self.open()
 
             self.connection.write((buf_header[1:]))
 
@@ -243,6 +206,7 @@ class Sas:
 
     @staticmethod
     def _check_response(rsp):
+        """Function in charge of the CRC Check"""
         if rsp == "":
             raise NoSasConnection
 
@@ -257,6 +221,12 @@ class Sas:
             return rsp[1:-2]
 
     def events_poll(self):
+        """Events Poll function
+
+        See Also
+        --------
+        WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
         self._conf_event_port()
 
         cmd = [0x80 + self.address]
@@ -275,6 +245,9 @@ class Sas:
         return event
 
     def shutdown(self):
+        """Make the VLT unplayable
+        :note: This is a LONG POLL COMMAND
+        """
         # [0x01]
         if self._send_command([0x01], True, crc_need=True) == self.address:
             return True
@@ -282,50 +255,121 @@ class Sas:
         return False
 
     def startup(self):
-        # [0x02]
+        """Synchronize to the host polling cycle
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x02], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def sound_off(self):
-        # [0x03]
+        """Disable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x03], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def sound_on(self):
-        # [0x04]
+        """Enable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x04], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def reel_spin_game_sounds_disabled(self):
-        # [0x05]
+        """Reel spin or game play sounds disabled
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x05], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def enable_bill_acceptor(self):
-        # [0x06]
+        """Enable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x06], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def disable_bill_acceptor(self):
-        # [0x07]
+        """Disable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         if self._send_command([0x07], True, crc_need=True) == self.address:
             return True
 
         return False
 
+
     def configure_bill_denom(
         self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
     ):
+        """Configure Bill Denominations
+
+        Parameters
+        ----------
+        bill_denom : dict
+            Bill denominations sent LSB first (0 = disable, 1 = enable)
+
+            =====  =====  ========  ========    =====
+            Bit    LSB    2nd Byte  3rd Byte    MSB
+            =====  =====  ========  ========    =====
+            0      $1     $200      $20000      TBD
+            1      $2     $250      $25000      TBD
+            2      $5     $500      $50000      TBD
+            3      $10    $1000     $100000     TBD
+            4      $20    $2000     $200000     TBD
+            5      $25    $2500     $250000     TBD
+            6      $50    $5000     $500000     TBD
+            7      $100   $10000    $1000000    TBD
+            =====  =====  ========  ========    =====
+
+        action_flag : dict
+            Action of bill acceptor after accepting a bill
+
+            =====  ===========
+            Bit    Description
+            =====  ===========
+            0      0 = Disable bill acceptor after each accepted bill
+
+                   1 = Keep bill acceptor enabled after each accepted bill
+            =====  ===========
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x08, 0x00]
         cmd.extend(bill_denom)
         cmd.extend(action_flag)
@@ -336,6 +380,22 @@ class Sas:
         return False
 
     def en_dis_game(self, game_number=None, en_dis=False):
+        """Enable or Disable a specific game
+
+        Parameters
+        ----------
+        game_number : bcd
+            0001-9999 Game number
+
+        en_dis : bool
+            Default is False. True enable a game | False disable it
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        """
         if not game_number:
             game_number = self.selected_game_number()
 
@@ -357,21 +417,48 @@ class Sas:
         return False
 
     def enter_maintenance_mode(self):
-        # [0x0A]
+        """Put the VLT in a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
         if self._send_command([0x0A], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def exit_maintenance_mode(self):
-        # [0x0B]
+        """Recover  the VLT from a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
         if self._send_command([0x0B], True, crc_need=True) == self.address:
             return True
 
         return False
 
     def en_dis_rt_event_reporting(self, enable=False):
-        # 0E
+        """For situations where real time event reporting is desired, the gaming machine can be configured to report events in response to long polls as well as general polls. This allows events such as reel stops, coins in, game end, etc., to be reported in a timely manner
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            See Also
+            --------
+            WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
         if not enable:
             enable = [0]
         else:
@@ -386,6 +473,23 @@ class Sas:
         return False
 
     def send_meters_10_15(self, denom=True):
+        """Send meters 10 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x0F]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
@@ -434,7 +538,23 @@ class Sas:
         return None
 
     def total_cancelled_credits(self, denom=True):
-        # 10
+        """Send total cancelled credits meter 
+
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+            """
         cmd = [0x10]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -448,7 +568,22 @@ class Sas:
         return None
 
     def total_bet_meter(self, denom=True):
-        # 11
+        """Send total coin in meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x11]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -462,7 +597,22 @@ class Sas:
         return None
 
     def total_win_meter(self, denom=True):
-        # 12
+        """Send total coin out meter
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+            """
         cmd = [0x12]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -475,8 +625,23 @@ class Sas:
 
         return None
 
-    def total_in_meter(self, denom=True):
-        # 13
+    def total_drop_meter(self, denom=True):
+        """Send total drop meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x13]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -490,7 +655,22 @@ class Sas:
         return None
 
     def total_jackpot_meter(self, denom=True):
-        # 14
+        """Send total jackpot meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x14]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -504,7 +684,17 @@ class Sas:
         return None
 
     def games_played_meter(self):
-        # 15
+        """Send games played meter
+
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x15]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -513,7 +703,22 @@ class Sas:
         return None
 
     def games_won_meter(self, denom=True):
-        # 16
+        """Send games won meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
         cmd = [0x16]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -527,7 +732,16 @@ class Sas:
         return None
 
     def games_lost_meter(self):
-        # 17
+        """Send games won meter
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x17]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -536,7 +750,17 @@ class Sas:
         return None
 
     def games_powerup_door_opened(self):
-        # 18
+        """Send meters 10 through 15
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x18]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -551,7 +775,23 @@ class Sas:
         return None
 
     def meters_11_15(self, denom=True):
-        # 19
+        """Send meters 11 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x19]
         data = self._send_command(cmd, crc_need=False, size=24)
         if data:
@@ -592,7 +832,23 @@ class Sas:
         return None
 
     def current_credits(self, denom=True):
-        # 1A
+        """Send current credits
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            round | int | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -606,7 +862,17 @@ class Sas:
         return None
 
     def handpay_info(self):
-        # 1B
+        """Send handpay information
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Warning: is missing 2-byte BCD Partial pay amount @todo FIX ME !
+        """
         cmd = [0x1B]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -627,7 +893,23 @@ class Sas:
         return None
 
     def meters(self, denom=True):
-        # 1C
+        """Send Meters
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters (in int or float) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1C]
         data = self._send_command(cmd, crc_need=False, size=36)
         if data:
@@ -638,7 +920,7 @@ class Sas:
                 Meters.Meters.STATUS_MAP["total_win_meter"] = int(
                     binascii.hexlify(bytearray(data[5:9]))
                 )
-                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = int(
                     binascii.hexlify(bytearray(data[9:13]))
                 )
                 Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
@@ -663,7 +945,7 @@ class Sas:
                 Meters.Meters.STATUS_MAP["total_win_meter"] = round(
                     int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
                 )
-                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = round(
                     int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
                 )
                 Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
@@ -687,7 +969,17 @@ class Sas:
         return None
 
     def total_bill_meters(self):
-        # 1E
+        """Send total bill meters (# of bills)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x1E]
         data = self._send_command(cmd, crc_need=False, size=28)
         if data:
@@ -715,9 +1007,26 @@ class Sas:
         return None
 
     def gaming_machine_id(self):
-        """
+        """Gaming machine information command
         @todo Check this one...something smell bad
-        :return:
+
+        According to doc:
+            =====================  ======  =================  ========================================================================================================================================
+            Field                  Bytes   Value              Description
+            =====================  ======  =================  ========================================================================================================================================
+            Address                1       binary 01-7F       Address of gaming machine responding
+            Command                1       binary 1F          Gaming machine information command
+            Game ID                2       ASCII ??           Game ID in ASCII. (see Table C-1 in Appendix C)
+            Additional ID          3       ASCII ???          Additional game ID in ASCII. If the gaming machine does not support an additional ID, this field should be padded with ASCII "0"s.
+            Denomination           1       binary 00-FF       Binary number representing the SAS accounting denomination of this gaming machine
+            Max bet                1       binary 01-FF       Largest configured max bet for the gaming machine, or FF if largest configured max bet greater than or equal to 255
+            Progressive Group      1       binary 00-FF       Current configured progressive group for the gaming machine
+            Game options           2       binary 0000-FFFF   Game options selected by the operator. The bit configurations are dependent upon the type of gaming machine.
+            Paytable ID            6       ASCII ??????       Paytable ID in ASCII
+            Base %                 4       ASCII ??.??        Theoretical base pay back percentage for maximum bet in ASCII. The decimal is implied and NOT transmitted.
+            CRC                    2       binary 0000-FFFF   16-bit CRC
+            =====================  ======  =================  ========================================================================================================================================
+
         """
         # 1F
         cmd = [0x1F]
@@ -740,7 +1049,17 @@ class Sas:
         return None
 
     def total_dollar_value_of_bills_meter(self):
-        # 20
+        """Send total dollar value of bills meter
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x20]
         data = self._send_command(cmd, crc_need=False, size=8)
 
@@ -750,7 +1069,17 @@ class Sas:
         return None
 
     def rom_signature_verification(self):
-        # 21
+        """ROM Signature Verification
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x21, 0x00, 0x00]
         data = self._send_command(cmd, crc_need=True)
         if data:
@@ -758,45 +1087,56 @@ class Sas:
 
         return None
 
-    def eft_button_pressed(self, state=0):
-        # 24
-        cmd = [0x24, 0x03, state]
-        data = self._send_command(cmd, crc_need=True)
-        if data:
-            return data
+    def true_coin_in(self):
+        """Send true coin in
 
-        return None
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
 
-    def true_coin_in(self, denom=True):
-        # 2A
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2A]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            if not denom:
-                return int(binascii.hexlify(bytearray(data[1:5])))
-            else:
-                return round(
-                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
-                )
+            return int(binascii.hexlify(bytearray(data[1:5])))
 
         return None
 
-    def true_coin_out(self, denom=True):
-        # 2B
+    def true_coin_out(self):
+        """Send true coin out
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2B]
         data = self._send_command(cmd, crc_need=False)
         if data:
-            if not denom:
-                return int(binascii.hexlify(bytearray(data[1:5])))
-            else:
-                return round(
-                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
-                )
+            return int(binascii.hexlify(bytearray(data[1:5])))
 
         return None
 
     def curr_hopper_level(self):
-        # 2C
+        """Send current hopper level
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2C]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -805,7 +1145,14 @@ class Sas:
         return None
 
     def total_hand_paid_cancelled_credit(self):
-        # 2D
+        """Send total hand paid cancelled credits
+
+        Notes
+        -------
+        WARNING ! @todo i return: 2-byte BCD game number and 4-byte BCD meter in SAS accounting denom units. Therefore this code is WRONG
+
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x2D]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -814,7 +1161,21 @@ class Sas:
         return None
 
     def delay_game(self, delay_time=100):
-        # 2E
+        """Delay Game
+        Parameters
+        ----------
+        delay_time : int
+            How long in ms to delay a game
+            
+        Returns
+        -------
+        bool
+            True for a successful operation, False otherwise
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         delay_time = str(delay_time)
         delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
         cmd = [0x2E]
@@ -831,10 +1192,21 @@ class Sas:
     def selected_meters_for_game():
         # 2F
         # TODO: selected_meters_for_game
+        # As per above...NOT ME ! @well-it-wasnt-me
         return None
 
     def send_1_bills_in_meters(self):
-        # 31
+        """Send 1$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x31]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -843,7 +1215,17 @@ class Sas:
         return None
 
     def send_2_bills_in_meters(self):
-        # 32
+        """Send 2$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x32]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -852,7 +1234,17 @@ class Sas:
         return None
 
     def send_5_bills_in_meters(self):
-        # 33
+        """Send 5$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x33]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -861,7 +1253,17 @@ class Sas:
         return None
 
     def send_10_bills_in_meters(self):
-        # 34
+        """Send 10$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x34]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -870,7 +1272,17 @@ class Sas:
         return None
 
     def send_20_bills_in_meters(self):
-        # 35
+        """Send 20$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x35]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -879,7 +1291,17 @@ class Sas:
         return None
 
     def send_50_bills_in_meters(self):
-        # 36
+        """Send 50$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x36]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -888,7 +1310,17 @@ class Sas:
         return None
 
     def send_100_bills_in_meters(self):
-        # 37
+        """Send 100$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x37]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -897,7 +1329,17 @@ class Sas:
         return None
 
     def send_500_bills_in_meters(self):
-        # 38
+        """Send 500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x38]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -906,7 +1348,17 @@ class Sas:
         return None
 
     def send_1000_bills_in_meters(self):
-        # 39
+        """Send 1.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x39]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -915,7 +1367,17 @@ class Sas:
         return None
 
     def send_200_bills_in_meters(self):
-        # 3A
+        """Send 200$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -924,7 +1386,17 @@ class Sas:
         return None
 
     def send_25_bills_in_meters(self):
-        # 3B
+        """Send 25$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3B]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -933,7 +1405,17 @@ class Sas:
         return None
 
     def send_2000_bills_in_meters(self):
-        # 3C
+        """Send 2.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3C]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -941,7 +1423,17 @@ class Sas:
         return None
 
     def cash_out_ticket_info(self):
-        # 3D
+        """Send cash out ticket information
+
+        Returns
+        -------
+        mixed
+            dict or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3D]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -1025,7 +1517,14 @@ class Sas:
         return None
 
     def credit_amount_of_all_bills_accepted(self):
-        # 46
+        """Send credit amount of all bills accepted
+
+        Returns
+        -------
+        mixed
+            meter in SAS accounting denom units or None
+
+        """
         cmd = [0x46]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1034,7 +1533,14 @@ class Sas:
         return None
 
     def coin_amount_accepted_from_external_coin_acceptor(self):
-        # 47
+        """Send coin amount accepted from an external coin acceptor
+
+        Returns
+        -------
+        mixed
+             meter in SAS accounting denom units or None
+
+        """
         cmd = [0x47]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1043,7 +1549,12 @@ class Sas:
         return None
 
     def last_accepted_bill_info(self):
-        # 48
+        """ Send last accepted bill information
+        Returns
+        -------
+        mixed
+            dict or None
+        """
         cmd = [0x48]
         data = self._send_command(cmd, crc_need=False)
         if data:
@@ -1061,7 +1572,12 @@ class Sas:
         return None
 
     def number_of_bills_currently_in_stacker(self):
-        # 49
+        """ Send number of bills currently in the stacker
+        Returns
+        -------
+        mixed
+            int ( meter in # of bills )  or None
+        """
         cmd = [0x49]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1094,7 +1610,7 @@ class Sas:
         :return:
         """
         # 4C
-        # FIXME: set_secure_enhanced_validation_ID
+        # FIXME: set_secure_enhanced_validation_ID @todo... im beat...@well-it-wasnt-me
         cmd = [0x4C, machine_id, seq_num]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
@@ -1293,6 +1809,7 @@ class Sas:
         This function should be checked at begin in order to address
         the changes from sas v6.02 and 6.03
         - Antonio
+        @todo...one day i'll see to this....
         """
         cmd = [0x54, 0x00]
         data = self._send_command(cmd, crc_need=False, size=20)
@@ -1356,48 +1873,6 @@ class Sas:
 
         return None
 
-    """
-    def eft_send_promo_to_machine(self, amount=0, count=1, status=0, **kwargs):
-        # 63
-        # FIXME: eft_send_promo_to_machine
-        cmd = [0x63, count, status, self._bcd_coder_array(amount, 4)]
-        # status 0-init 1-end
-        data = self._send_command(cmd, crc_need=True)
-        if data:
-            EftStatement.eft_status = str(
-                binascii.hexlify(bytearray(data[1:]))
-            )
-            EftStatement.promo_amount = str(
-                binascii.hexlify(bytearray(data[4:]))
-            )
-            # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-            return EftStatement
-
-        return None
-
-    def eft_load_cashable_credits(self, amount=0, count=1, status=0, **kwargs):
-        # 69
-        # FIXME: eft_load_cashable_credits
-        cmd = [0x69, count, status, self._bcd_coder_array(amount, 4)]
-        data = self._send_command(cmd, True, crc_need=True)
-        if data:
-            meters["eft_status"] = str(binascii.hexlify(bytearray(data[1:2])))
-            meters["cashable_amount"] = str(binascii.hexlify(bytearray(data[2:5])))
-            return data[3]
-
-        return None
-
-    def eft_available_transfers(self, **kwargs):
-        # 6A
-        # FIXME: eft_load_cashable_credits
-        cmd = [0x6A]
-        data = self._send_command(cmd, True, crc_need=False)
-        if data:
-            # meters['number_bills_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
-            return data
-
-        return None
-    """
 
     def authentication_info(
         self,
@@ -1410,6 +1885,50 @@ class Sas:
         offset="",
         offset_length=0,
     ):
+        """
+
+        Parameters
+        ----------
+        action : 1 binary
+            Requested authentication action:
+
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Interrogate number of installed components
+            01      Read status of component (address required)
+            02      Authenticate component (address required)
+            03      Interrogate authentication status
+            =====  =====
+
+        addressing_mode : 1 binary
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Addressing by component index number
+            01      Addressing by component name
+            =====  =====
+
+        component_name : x bytes
+            ASCII component name if addressing mode = 01
+
+        auth_method : 4 binary
+            ==============      ============    ======================  =======================
+            Code (Binary)       Method          Seed size (max bytes)   Result Size (max bytes)
+            ==============      ============    ======================  =======================
+            00000000            None            n/a                     n/a
+            00000001            CRC16           2 binary                2 binary
+            00000002            CRC32           4 binary                4 binary
+            00000004            MD5             16 bytes                16 bytes
+            00000008            Kobetron I      4 ASCII                 4 ASCII
+            00000010            Kobetron II     4 ASCII                 4 ASCII
+            00000020            SHA1            20 Bytes                20 Bytes
+            ==============      ============    ======================  =======================
+
+        Returns
+        -------
+
+        """
         # 6E
         # FIXME: authentication_info
         cmd = [0x6E, 0x00, action]
@@ -1454,6 +1973,11 @@ class Sas:
     def ticket_validation_data(self):
         # 70
         # FIXME: ticket_validation_data
+        # @todo This is wrong for sure....this should reply 9 BCD BCD-encoded 18 digit decimal validation number. The first two digits are a 2
+        # digit system ID code indicating how to interpret the following 16 digits.
+        # System ID code 00 indicates that the following 16 digits represent a SAS
+        # secure enhanced validation number. Other system ID codes and parsing codes
+        # will be assigned by IGT as needed
         cmd = [0x70]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
@@ -1496,10 +2020,10 @@ class Sas:
         ]
         data = self._send_command(cmd, True, crc_need=True)
         if data:
-            Meters.Meters.STATUS_MAP["ticket_status"] = int(
+            Meters.Meters.STATUS_MAP["machine_status"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
-            Meters.Meters.STATUS_MAP["ticket_amount"] = int(
+            Meters.Meters.STATUS_MAP["transfer_amount"] = int(
                 binascii.hexlify(bytearray(data[3:8]))
             )
             Meters.Meters.STATUS_MAP["parsing_code"] = int(
@@ -1614,7 +2138,7 @@ class Sas:
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
                 "Transaction ID": binascii.hexlify(
                     bytearray(data[27 : (27 + a)])
-                ),  # WARNING: technically should be (27 + 2 * a) due to an off error....
+                ),  # WARNING: technically should be (27 + 2 * a) due to an off error.... @todo...somebody see me !
             }
         try:
             self.aft_unregister()
