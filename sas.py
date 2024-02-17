@@ -24,17 +24,17 @@ class Sas:
     """Main SAS Library Class"""
 
     def __init__(
-        self,
-        port,  # Serial Port full Address
-        timeout=2,  # Connection timeout
-        poll_address=0x82,  # Poll Address
-        denom=0.01,  # Denomination
-        asset_number="01000000",  # Asset Number
-        reg_key="0000000000000000000000000000000000000000",  # Reg Key
-        pos_id="B374A402",  # Pos ID
-        key="44",  # Key
-        debug_level="DEBUG",  # Debug Level
-        perpetual=False # When this is true the lib will try forever to connect to the serial
+            self,
+            port,  # Serial Port full Address
+            timeout=2,  # Connection timeout
+            poll_address=0x82,  # Poll Address
+            denom=0.01,  # Denomination
+            asset_number="01000000",  # Asset Number
+            reg_key="0000000000000000000000000000000000000000",  # Reg Key
+            pos_id="B374A402",  # Pos ID
+            key="44",  # Key
+            debug_level="DEBUG",  # Debug Level
+            perpetual=False  # When this is true the lib will try forever to connect to the serial
     ):
         # Let's address some internal var
         self.poll_timeout = timeout
@@ -69,7 +69,7 @@ class Sas:
             except:
                 if not self.perpetual:
                     self.log.critical("Error while connecting to the machine....Quitting...")
-                    exit(1) # Make a graceful exit since it's expected behaviour
+                    exit(1)  # Make a graceful exit since it's expected behaviour
 
                 self.log.critical("Error while connecting to the machine....")
                 time.sleep(1)
@@ -157,7 +157,7 @@ class Sas:
         self.connection.reset_input_buffer()
 
     def _send_command(
-        self, command, no_response=False, timeout=None, crc_need=True, size=1
+            self, command, no_response=False, timeout=None, crc_need=True, size=1
     ):
         """Main function to physically send commands to the VLT"""
         try:
@@ -326,9 +326,8 @@ class Sas:
 
         return False
 
-
     def configure_bill_denom(
-        self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
+            self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
     ):
         """Configure Bill Denominations
 
@@ -1181,7 +1180,7 @@ class Sas:
         cmd = [0x2E]
         count = 0
         for i in range(len(delay_fmt) // 2):
-            cmd.append(int(delay_fmt[count : count + 2], 16))
+            cmd.append(int(delay_fmt[count: count + 2], 16))
             count += 2
         if self._send_command(cmd, True, crc_need=True) == self.address:
             return True
@@ -1445,7 +1444,17 @@ class Sas:
         return None
 
     def send_2500_bills_in_meters(self):
-        # 3E
+        """Send 2.500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3E]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1454,7 +1463,17 @@ class Sas:
         return None
 
     def send_5000_bills_in_meters(self):
-        # 3F
+        """Send 5.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x3F]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1463,7 +1482,17 @@ class Sas:
         return None
 
     def send_10000_bills_in_meters(self):
-        # 40
+        """Send 10.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x40]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1472,7 +1501,17 @@ class Sas:
         return None
 
     def send_20000_bills_in_meters(self):
-        # 41
+        """Send 20.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x41]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1481,7 +1520,17 @@ class Sas:
         return None
 
     def send_25000_bills_in_meters(self):
-        # 42
+        """Send 25.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x42]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1490,7 +1539,17 @@ class Sas:
         return None
 
     def send_50000_bills_in_meters(self):
-        # 43
+        """Send 50.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x43]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1499,7 +1558,17 @@ class Sas:
         return None
 
     def send_100000_bills_in_meters(self):
-        # 44
+        """Send 100.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x44]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1508,7 +1577,17 @@ class Sas:
         return None
 
     def send_250_bills_in_meters(self):
-        # 45
+        """Send 250$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
         cmd = [0x45]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
@@ -1586,8 +1665,18 @@ class Sas:
         return None
 
     def total_credit_amount_of_all_bills_in_stacker(self):
-        # 4A
-        cmd = [0x49]
+        """Send total credit amount of all bills currently in the stacker
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x4A]
         data = self._send_command(cmd, crc_need=False, size=8)
         if data:
             return int(binascii.hexlify(bytearray(data[1:5])))
@@ -1595,7 +1684,7 @@ class Sas:
         return None
 
     def set_secure_enhanced_validation_id(
-        self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
+            self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
     ):
         """
         For a gaming machine to perform secure enhanced ticket/receipt/handpay validation, the host must use
@@ -1604,9 +1693,8 @@ class Sas:
         machine validation ID of zero. If a gaming machine is not configured to perform secure enhanced
         validation, or is responding to a host that is not the validation controller, it ignores this long poll
 
-        :param machine_id:
-        :param seq_num:
-        :param kwargs:
+        :param machine_id: 3 binary - Gaming machine validation ID number
+        :param seq_num: 3 binary - Starting sequence number (incremented before being assigned to each event)
         :return:
         """
         # 4C
@@ -1625,7 +1713,18 @@ class Sas:
         return None
 
     def enhanced_validation_information(self, curr_validation_info=0):
-        # 4D
+        """Send Enhanced Validation Information Command
+
+        Parameters
+        ----------
+        curr_validation_info :
+            Function code; 00 = read current validation info | 01-1F = validation info from buffer index n | FF = look ahead at current validation info
+
+        Returns
+        -------
+        mixed :
+            dict | none
+        """
         # FIXME: enhanced_validation_information
         cmd = [0x4D, curr_validation_info]
         data = self._send_command(cmd, True, crc_need=True)
@@ -1645,7 +1744,7 @@ class Sas:
             TitoStatement.Tito.STATUS_MAP["validation_number"] = str(
                 binascii.hexlify(bytearray(data[10:18]))
             )
-            TitoStatement.Tito.STATUS_MAP["ticket_amount"] = int(
+            TitoStatement.Tito.STATUS_MAP["amount"] = int(
                 binascii.hexlify(bytearray(data[18:23]))
             )
             TitoStatement.Tito.STATUS_MAP["ticket_number"] = int(
@@ -1666,15 +1765,54 @@ class Sas:
         return None
 
     def current_hopper_status(self):
-        # 4F
+        """Send Current Hopper Status
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        ------
+        Understanding the values:
+
+        - current_hopper_length
+        ==============      =====
+        Code (Binary)       Description
+        ==============      =====
+        02                   Only status and % full
+        06                   Status, % full and level
+        ==============      =====
+
+        - current_hopper_status
+        ==============      =====
+        Code (Binary)       Status
+        ==============      =====
+        00                   Hopper OK
+        01                   Flooded Optics
+        02                   Reverse Coin
+        03                   Coin too short
+        04                   Coin Jam
+        05                   Hopper runaway
+        06                   Optics Disconnected
+        07                   Hopper Empty
+        08-FE                Reserved
+        FF                   Other
+        ==============      =====
+
+        - current_hopper_percent_full :
+            Current hopper level as 0-100%, or FF if unable to detect hopper level percentage
+
+        - current_hopper_level :
+            4 BCD | Current hopper level in number of coins/tokens, only if EGM able to detect
+        """
         # FIXME: current_hopper_status
         cmd = [0x4F]
         data = self._send_command(cmd, True, crc_need=False)
         if data:
-            Meters.Meters.STATUS_MAP["current_hopper_lenght"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_length"] = int(
                 binascii.hexlify(bytearray(data[1:2]))
             )
-            Meters.Meters.STATUS_MAP["current_hopper_ststus"] = int(
+            Meters.Meters.STATUS_MAP["current_hopper_status"] = int(
                 binascii.hexlify(bytearray(data[2:3]))
             )
             Meters.Meters.STATUS_MAP["current_hopper_percent_full"] = int(
@@ -1688,7 +1826,45 @@ class Sas:
         return None
 
     def validation_meters(self, type_of_validation=0x00):
-        # 50
+        """Send validation meters
+        Parameters
+        ----------
+        type_of_validation : int
+            Type of validation
+
+            ==============      =====
+            Code (Binary)       Validation type
+            ==============      =====
+            00                   Cashable ticket from cashout or win, no handpay lockup
+            01                   Restricted promotional ticket from cashout
+            02                   Cashable ticket from AFT transfer
+            03                   Restricted ticket from AFT transfer
+            04                   Debit ticket from AFT transfer
+            10                   Cancelled credit handpay (receipt printed
+            20                   Jackpot handpay (receipt printed)
+            40                   Cancelled credit handpay (no receipt)
+            60                   Jackpot handpay (no receipt)
+            80                   Cashable ticket redeemed
+            81                   Restricted promotional ticket redeemed
+            82                   Nonrestricted promotional ticket redeemed
+            ==============      =====
+
+
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        -------
+        Understanding the response:
+            - bin_validation_type :
+                See the table "Type of validation"
+            - total_validations : 4 BCD
+                Total number of validations of type
+            - cumulative_amount : 5 BCD
+                Cumulative validation amount in units of cents
+        """
         # FIXME: validation_meters
         cmd = [0x50, type_of_validation]
         data = self._send_command(cmd, True, crc_need=True)
@@ -1815,7 +1991,7 @@ class Sas:
         data = self._send_command(cmd, crc_need=False, size=20)
         if data:
             Meters.Meters.STATUS_MAP["ASCII_SAS_version"] = (
-                int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
+                    int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
             )
             Meters.Meters.STATUS_MAP["ASCII_serial_number"] = str(bytearray(data[5:]))
             return Meters.Meters.get_non_empty_status_map()
@@ -1864,26 +2040,38 @@ class Sas:
 
         return None
 
-    def validation_number(self, validation_id=1, valid_number=0):
-        # 58
-        cmd = [0x58, validation_id, self._bcd_coder_array(valid_number, 8)]
+    def rcv_validation_number(self, validation_id=1, valid_number=0):
+        """Receive Validation number
+        Parameters
+        ----------
+        validation_id : int
+            Validation System ID Code (00 = system validation denied)
+
+        valid_number : int
+            validation number to use for cashout (not used if validation denied)
+
+        Returns
+        -------
+        Mixed
+            str | none - 00 = command ack | 80 = Not in cashout | 81 = Improper validation rejected
+        """
+        cmd = [0x58, self._bcd_coder_array(validation_id, 1), self._bcd_coder_array(valid_number, 8)]
         data = self._send_command(cmd, crc_need=True)
         if data:
             return str(binascii.hexlify(bytearray(data[1])))
 
         return None
 
-
     def authentication_info(
-        self,
-        action=0,
-        addressing_mode=0,
-        component_name="",
-        auth_method=b"\x00\x00\x00\x00",
-        seed="",
-        seed_length=0,
-        offset="",
-        offset_length=0,
+            self,
+            action=0,
+            addressing_mode=0,
+            component_name="",
+            auth_method=b"\x00\x00\x00\x00",
+            seed="",
+            seed_length=0,
+            offset="",
+            offset_length=0,
     ):
         """
 
@@ -1927,6 +2115,12 @@ class Sas:
 
         Returns
         -------
+        bytearray
+            Response ACK/NACK
+
+        Notes
+        -------
+        Actually the real response is way more long and complex. Planning to map and implement it in the future
 
         """
         # 6E
@@ -1952,10 +2146,10 @@ class Sas:
                     cmd.append(bytearray(offset))
 
                     cmd[1] = (
-                        len(bytearray(offset))
-                        + len(bytearray(seed))
-                        + len(bytearray(component_name))
-                        + 6
+                            len(bytearray(offset))
+                            + len(bytearray(seed))
+                            + len(bytearray(component_name))
+                            + 6
                     )
 
         data = self._send_command(cmd, True, crc_need=True)
@@ -1998,13 +2192,13 @@ class Sas:
         return None
 
     def redeem_ticket(
-        self,
-        transfer_code=0,
-        transfer_amount=0,
-        parsing_code=0,
-        validation_data=0,
-        restricted_expiration=0,
-        pool_id=0
+            self,
+            transfer_code=0,
+            transfer_amount=0,
+            parsing_code=0,
+            validation_data=0,
+            restricted_expiration=0,
+            pool_id=0
     ):
         # 71
         # FIXME: redeem_ticket
@@ -2074,8 +2268,8 @@ class Sas:
 
         last_transaction = self.aft_format_transaction()
         len_transaction_id = hex(len(last_transaction) // 2)[
-            2:
-        ]  # the division result should be converted to an integer before using hex, added extra / to solve this
+                             2:
+                             ]  # the division result should be converted to an integer before using hex, added extra / to solve this
         if len(len_transaction_id) < 2:
             len_transaction_id = "0" + len_transaction_id
         elif len(len_transaction_id) % 2 == 1:
@@ -2099,9 +2293,9 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(
-            len(cmd) // 2
+                len(cmd) // 2
         ):  # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -2128,16 +2322,16 @@ class Sas:
                     binascii.hexlify(bytearray(data[5:6]))
                 ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                * self.denom,
+                                   * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                * self.denom,
+                                     * self.denom,
                 "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
-                * self.denom,
+                                        * self.denom,
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
                 "Transaction ID": binascii.hexlify(
-                    bytearray(data[27 : (27 + a)])
+                    bytearray(data[27: (27 + a)])
                 ),  # WARNING: technically should be (27 + 2 * a) due to an off error.... @todo...somebody see me !
             }
         try:
@@ -2203,7 +2397,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -2229,17 +2423,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
@@ -2286,7 +2480,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         self.aft_register()
@@ -2311,17 +2505,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.critical(e, exc_info=True)
@@ -2336,7 +2530,7 @@ class Sas:
         return True
 
     def aft_won(
-        self, money="0000000000", amount=1, games=None, lock_timeout=0
+            self, money="0000000000", amount=1, games=None, lock_timeout=0
     ):
         money_1 = money_2 = money_3 = "0000000000"
         if self.denom > 0.01:
@@ -2392,7 +2586,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -2418,17 +2612,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
         except Exception as e:
             self.log.error(e, exc_info=True)
@@ -2489,7 +2683,7 @@ class Sas:
         new_cmd = []
         count = 0
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         try:
@@ -2511,17 +2705,17 @@ class Sas:
                         [binascii.hexlify(bytearray(data[5:6]))]
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
 
                 self.aft_unregister()
@@ -2547,7 +2741,7 @@ class Sas:
         count = 0
         new_cmd = []
         for i in range(len(cmd) // 2):
-            new_cmd.append(int(cmd[count : count + 2], 16))
+            new_cmd.append(int(cmd[count: count + 2], 16))
             count += 2
 
         response = None
@@ -2567,17 +2761,17 @@ class Sas:
                         binascii.hexlify(bytearray(data[5:6]))
                     ),
                     "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                    * self.denom,
+                                       * self.denom,
                     "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                    * self.denom,
+                                         * self.denom,
                     "Nonrestricted amount": int(
                         binascii.hexlify(bytearray(data[16:21]))
                     )
-                    * self.denom,
+                                            * self.denom,
                     "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                     "Asset number": binascii.hexlify(bytearray(data[22:26])),
                     "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                    "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
                 }
 
             if register:
@@ -2605,21 +2799,21 @@ class Sas:
         return False
 
     def aft_transfer_funds(
-        self,
-        transfer_code=0x00,
-        transaction_index=0x00,
-        transfer_type=0x00,
-        cashable_amount=0,
-        restricted_amount=0,
-        non_restricted_amount=0,
-        transfer_flags=0x00,
-        asset_number=b"\x00\x00\x00\x00\x00",
-        registration_key=0,
-        transaction_id="",
-        expiration=0,
-        pool_id=0,
-        receipt_data="",
-        lock_timeout=0
+            self,
+            transfer_code=0x00,
+            transaction_index=0x00,
+            transfer_type=0x00,
+            cashable_amount=0,
+            restricted_amount=0,
+            non_restricted_amount=0,
+            transfer_flags=0x00,
+            asset_number=b"\x00\x00\x00\x00\x00",
+            registration_key=0,
+            transaction_id="",
+            expiration=0,
+            pool_id=0,
+            receipt_data="",
+            lock_timeout=0
     ):
         # 72
         cmd = [
@@ -2676,43 +2870,43 @@ class Sas:
             )
             a = int(binascii.hexlify(bytearray(data[26:27])))
             AftStatements.AftStatements.STATUS_MAP["transaction_id"] = str(
-                binascii.hexlify(bytearray(data[27 : (27 + a + 1)]))
+                binascii.hexlify(bytearray(data[27: (27 + a + 1)]))
             )
             a = 27 + a + 1
             AftStatements.AftStatements.STATUS_MAP["transaction_date"] = str(
-                binascii.hexlify(bytearray(data[a : a + 5]))
+                binascii.hexlify(bytearray(data[a: a + 5]))
             )
             a = a + 5
             AftStatements.AftStatements.STATUS_MAP["transaction_time"] = str(
-                binascii.hexlify(bytearray(data[a : a + 4]))
+                binascii.hexlify(bytearray(data[a: a + 4]))
             )
             AftStatements.AftStatements.STATUS_MAP["expiration"] = str(
-                binascii.hexlify(bytearray(data[a + 4 : a + 9]))
+                binascii.hexlify(bytearray(data[a + 4: a + 9]))
             )
             AftStatements.AftStatements.STATUS_MAP["pool_id"] = str(
-                binascii.hexlify(bytearray(data[a + 9 : a + 11]))
+                binascii.hexlify(bytearray(data[a + 9: a + 11]))
             )
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_cashable_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[a + 11 : a + 12]))
-            b = a + int(binascii.hexlify(bytearray(data[a + 11 : a + 12])))
+            ] = binascii.hexlify(bytearray(data[a + 11: a + 12]))
+            b = a + int(binascii.hexlify(bytearray(data[a + 11: a + 12])))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_cashable_amount_meter"
-            ] = binascii.hexlify(bytearray(data[a + 12 : b + 1]))
+            ] = binascii.hexlify(bytearray(data[a + 12: b + 1]))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_restricted_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[b + 1 : b + 2]))
-            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1 : b + 2])))
+            ] = binascii.hexlify(bytearray(data[b + 1: b + 2]))
+            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1: b + 2])))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_restricted_amount_meter"
-            ] = binascii.hexlify(bytearray(data[b + 2 : c]))
+            ] = binascii.hexlify(bytearray(data[b + 2: c]))
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_nonrestricted_amount_meter_size"
-            ] = binascii.hexlify(bytearray(data[c : c + 1]))
-            b = int(binascii.hexlify(bytearray(data[c : c + 1]))) + c
+            ] = binascii.hexlify(bytearray(data[c: c + 1]))
+            b = int(binascii.hexlify(bytearray(data[c: c + 1]))) + c
             AftStatements.AftStatements.STATUS_MAP[
                 "cumulative_nonrestricted_amount_meter"
-            ] = binascii.hexlify(bytearray(data[c + 1 :]))
+            ] = binascii.hexlify(bytearray(data[c + 1:]))
 
             return AftStatements.AftStatements.get_non_empty_status_map()
 
@@ -2727,7 +2921,7 @@ class Sas:
                     raise ValueError
 
                 count = int(binascii.hexlify(data[26:27]), 16)
-                transaction = binascii.hexlify(data[27 : 27 + count])
+                transaction = binascii.hexlify(data[27: 27 + count])
                 if transaction == "2121212121212121212121212121212121":
                     transaction = "2020202020202020202020202020202021"
                 self.transaction = int(transaction, 16)
@@ -2762,7 +2956,7 @@ class Sas:
         count = 0
         tmp = []
         for i in range(len(transaction) // 2):
-            tmp.append(transaction[count : count + 2])
+            tmp.append(transaction[count: count + 2])
             count += 2
 
         tmp.reverse()
@@ -2806,7 +3000,7 @@ class Sas:
             cmd[1] = 0x1D
             count = 0
             for i in range(len(tmp) // 2):
-                cmd.append(int(tmp[count : count + 2], 16))
+                cmd.append(int(tmp[count: count + 2], 16))
                 count += 2
 
         data = self._send_command(cmd, crc_need=True, size=34)
@@ -2835,7 +3029,7 @@ class Sas:
         return self.aft_game_lock_and_status_request(lock_code=0x80)
 
     def aft_game_lock_and_status_request(
-        self, lock_code=0x00, transfer_condition=00, lock_timeout=0
+            self, lock_code=0x00, transfer_condition=00, lock_timeout=0
     ):
         # 74
         cmd = [
@@ -2904,15 +3098,15 @@ class Sas:
                     binascii.hexlify(bytearray(data[5:6]))
                 ),
                 "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
-                * self.denom,
+                                   * self.denom,
                 "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
-                * self.denom,
+                                     * self.denom,
                 "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
-                * self.denom,
+                                        * self.denom,
                 "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
                 "Asset number": binascii.hexlify(bytearray(data[22:26])),
                 "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
-                "Transaction ID": binascii.hexlify(bytearray(data[27 : (27 + a)])),
+                "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
             }
         try:
             self.aft_unregister()
@@ -2933,11 +3127,11 @@ class Sas:
         return NotImplemented
 
     def extended_validation_status(
-        self,
-        control_mask=[0, 0],
-        status_bits=[0, 0],
-        cashable_ticket_receipt_exp=0,
-        restricted_ticket_exp=0
+            self,
+            control_mask=[0, 0],
+            status_bits=[0, 0],
+            cashable_ticket_receipt_exp=0,
+            restricted_ticket_exp=0
     ):
         # 7B
         cmd = [
@@ -2992,7 +3186,7 @@ class Sas:
         fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
         count = 0
         for i in range(len(fmt_cmd) // 2):
-            cmd.append(int(fmt_cmd[count : count + 2], 16))
+            cmd.append(int(fmt_cmd[count: count + 2], 16))
             count += 2
 
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -3052,7 +3246,7 @@ class Sas:
         cmd = [0x8A]
         count = 0
         for i in range(len(t_cmd) // 2):
-            cmd.append(int(t_cmd[count : count + 2], 16))
+            cmd.append(int(t_cmd[count: count + 2], 16))
             count += 2
 
         if self._send_command(cmd, True, crc_need=True) == self.address:
@@ -3210,7 +3404,7 @@ class Sas:
                 GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 0
 
             GameFeatures.GameFeatures.STATUS_MAP["validation_style"] = (
-                data[3] & 0b01100000 >> 5
+                    data[3] & 0b01100000 >> 5
             )
 
             if data[3] & 0b10000000:
