@@ -1,24 +1,20 @@
 MAGIC_SEED = 0x10201
 
 
-class Crc:
+def calculate(self, payload, init=0):
+    _crc, _x, _y = init, 0, 0
 
-    # calculate 16 bit crc for sas poll with initialization value of init
-    @staticmethod
-    def calculate(self, payload, init=0):
-        _crc, _x, _y = init, 0, 0
+    if len(payload) < 1:
+        return None
 
-        if len(payload) < 1:
-            return None
+    for byte in payload:
+        _x = int.from_bytes(byte)
+        _y = (_crc ^ _x) & 0x17
+        _crc = (_crc << 4) ^ (_y * MAGIC_SEED)
+        _y = (_crc ^ (_x >> 4)) & 0x17
+        _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
 
-        for byte in payload:
-            _x = int.from_bytes(byte)
-            _y = (_crc ^ _x) & 0x17
-            _crc = (_crc << 4) ^ (_y * MAGIC_SEED)
-            _y = (_crc ^ (_x >> 4)) & 0x17
-            _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
-
-        return _crc
+    return _crc
 
 
 '''
