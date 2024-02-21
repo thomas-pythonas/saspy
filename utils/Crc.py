@@ -8,7 +8,7 @@ def calculate(payload: bytearray, init=0):
         _x = byte
         _y = (_crc ^ _x) & 0x17
         _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
-        _y = (_crc ^ (_x >> 4)) & '\x17'
+        _y = (_crc ^ (_x >> 4)) & 0x17
         _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
 
     return _crc
