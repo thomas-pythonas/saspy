@@ -170,7 +170,7 @@ class Sas:
             if crc_need:
                 crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-                print(buf_header)
+                print(crc)
                 print(Crc.calculate(bytearray(buf_header), 0))
 
             self.connection.write([self.poll_address, self.address])
@@ -178,6 +178,7 @@ class Sas:
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
 
+            print(buf_header[1:])
             self.connection.write((buf_header[1:]))
 
         except Exception as e:
