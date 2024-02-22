@@ -1,7 +1,7 @@
 from enum import Enum
 from ctypes import c_ushort
 
-#MAGIC_SEED = 0x10201
+MAGIC_SEED = 0x10201
 
 
 class Endianness(Enum):
@@ -14,12 +14,14 @@ def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
 
     for byte in payload:
         y = crc ^ byte
-        crc = c_ushort(crc >> 8).value ^ int((y & 0x00ff) & 0xFF)
+        crc = c_ushort(crc >> 8).value ^ (y * MAGIC_SEED)
+        _y = (crc ^ (byte >> 4)) & 0x17
+        crc = (crc >> 4) ^ (y * MAGIC_SEED)
 
     if sigbit == Endianness.LITTLE_ENDIAN:
-        return (crc & 0xff00) >> 8, (crc & 0x00ff) << 8
+        return (crc & 0xFF), ((crc >> 8) & 0xFF)
 
-    return (crc & 0x00ff) << 8, (crc & 0xff00) >> 8
+    return ((crc >> 8) & 0xFF), (crc & 0xFF)
 
 
 '''
