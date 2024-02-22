@@ -8,7 +8,7 @@ class Endianness(Enum):
     BIG_ENDIAN = 1
 
 
-def calculate(payload: bytearray, init=0, sigbit=Endianness.LITTLE_ENDIAN):
+def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
     _crc, _y = init, 0
 
     for byte in payload:
