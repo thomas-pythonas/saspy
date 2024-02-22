@@ -11,7 +11,7 @@ def calculate(payload: bytearray, init=0):
         _y = (_crc ^ (_x >> 4)) & 0x17
         _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
 
-    return _crc
+    return ((_crc >> 8) & 0xFF), (_crc & 0xFF)
 
 
 '''
