@@ -1,7 +1,14 @@
+from enum import Enum
+
 MAGIC_SEED = 0x10201
 
 
-def calculate(payload: bytearray, init=0):
+class Endianness(Enum):
+    LITTLE_ENDIAN = 0
+    BIG_ENDIAN = 1
+
+
+def calculate(payload: bytearray, init=0, sigbit=Endianness.LITTLE_ENDIAN):
     _crc, _y = init, 0
 
     for byte in payload:
@@ -10,6 +17,9 @@ def calculate(payload: bytearray, init=0):
         _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
         _y = (_crc ^ (_x >> 4)) & 0x17
         _crc = (_crc >> 4) ^ (_y * MAGIC_SEED)
+
+    if sigbit == Endianness.LITTLE_ENDIAN:
+        return (_crc & 0xFF), ((_crc >> 8) & 0xFF)
 
     return ((_crc >> 8) & 0xFF), (_crc & 0xFF)
 
