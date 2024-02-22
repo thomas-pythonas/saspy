@@ -170,7 +170,7 @@ class Sas:
             if crc_need:
                 crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-                print(crc)
+                print([((crc >> 8) & 0xFF), (crc & 0xFF)])
                 print(Crc.calculate(bytearray(buf_header), 0))
 
             self.connection.write([self.poll_address, self.address])
