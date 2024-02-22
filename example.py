@@ -21,7 +21,7 @@ sas = Sas(
 
 print(sas.start())
 print(sas.en_dis_rt_event_reporting(False))
-print(sas.sas_version_gaming_machine_serial_id())
+#print(sas.sas_version_gaming_machine_serial_id())
 print(sas.gaming_machine_id())
 #print(sas.aft_in(15.00))
 #print(sas.aft_clean_transaction_poll())
