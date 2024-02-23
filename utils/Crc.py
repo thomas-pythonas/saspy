@@ -16,7 +16,7 @@ def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
         x = byte << 4
         y = (crc ^ x) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
-        y = (crc ^ (x >> 4)) & 0o17
+        y = (crc ^ (x >> 8)) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
 
     if sigbit == Endianness.BIG_ENDIAN:
