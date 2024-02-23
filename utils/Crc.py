@@ -21,16 +21,16 @@ if not len(value_table):
 
 
 def calculate(self, payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
-    crc = init
+    _crc = init
 
     for c in payload:
-        q = crc ^ c
-        crc = c_ushort(crc >> 8).value ^ int(self.value_table[(q & 0x00ff)], 0)
+        q = _crc ^ c
+        _crc = c_ushort(_crc >> 8).value ^ int(self.value_table[(q & 0x00ff)], 0)
 
     if sigbit == Endianness.BIG_ENDIAN:
-        return (crc & 0x00ff) << 8 | (crc & 0xff00) >> 8
+        return (_crc & 0x00ff) << 8 | (_crc & 0xff00) >> 8
 
-    return (crc & 0xff00) >> 8 | (crc & 0x00ff) << 8
+    return (_crc & 0xff00) >> 8 | (_crc & 0x00ff) << 8
 
 
 ''' Tableless algo in Python and Rust
