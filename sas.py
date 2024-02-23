@@ -47,7 +47,7 @@ class Sas:
         self.pos_id = pos_id
         self.transaction = None
         self.my_key = key
-        self.poll_address = poll_address
+        self.poll_address= poll_address
         self.perpetual = perpetual
 
         # Init the Logging system
@@ -139,7 +139,7 @@ class Sas:
             raise SASOpenError
 
     def _conf_event_port(self):
-        """Do magick to make SAS Happy and work with their effing parity"""
+        """Do magick to make SAS Happy and work with their effing wakeup bit"""
         self.open()
         self.connection.flush()
         self.connection.timeout = self.poll_timeout
@@ -168,14 +168,12 @@ class Sas:
 
             if crc_need:
                 buf_header.extend(Crc.calculate(bytes(buf_header)))
-                print(buf_header)
 
             self.connection.write([self.poll_address, self.address])
 
             self.connection.flush()
             self.connection.parity = serial.PARITY_SPACE
 
-            print(buf_header[1:])
             self.connection.write((buf_header[1:]))
 
         except Exception as e:
@@ -214,7 +212,6 @@ class Sas:
         mac_crc = [int.from_bytes(rsp[-2:-1]), int.from_bytes(rsp[-1:])]
         my_crc = Crc.calculate(rsp[0:-2])
 
-        print(mac_crc, my_crc)
         if mac_crc != my_crc:
             raise BadCRC(binascii.hexlify(rsp))
         else:
