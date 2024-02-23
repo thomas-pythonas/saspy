@@ -1,43 +1,36 @@
 from enum import Enum
 from ctypes import c_ushort
 
-# MAGIC_SEED = 0x10201
-
 MAGIC_SEED = 0x8408
-
+value_table = []
 
 class Endianness(Enum):
     LITTLE_ENDIAN = 0
     BIG_ENDIAN = 1
 
 
-class Crc:
+if not len(value_table):
+    for i in range(0, 256):
+        crc = c_ushort(i).value
+        for j in range(0, 8):
+            if crc & 0x0001:
+                crc = c_ushort(crc >> 1).value ^ MAGIC_SEED
+            else:
+                crc = c_ushort(crc >> 1).value
+        value_table.append(hex(crc))
 
-    value_table = []
 
-    def __init__(self):
-        # Easier in python to use table algo
-        if not len(self.value_table):
-            for i in range(0, 256):
-                crc = c_ushort(i).value
-                for j in range(0, 8):
-                    if crc & 0x0001:
-                        crc = c_ushort(crc >> 1).value ^ MAGIC_SEED
-                    else:
-                        crc = c_ushort(crc >> 1).value
-                self.value_table.append(hex(crc))
+def calculate(self, payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
+    crc = init
 
-    def calculate(self, payload=None, init=0, sigbit=Endianness):
-        crc = init
+    for c in payload:
+        q = crc ^ c
+        crc = c_ushort(crc >> 8).value ^ int(self.value_table[(q & 0x00ff)], 0)
 
-        for c in payload:
-            q = crc ^ c
-            crc = c_ushort(crc >> 8).value ^ int(self.value_table[(q & 0x00ff)], 0)
+    if sigbit == Endianness.BIG_ENDIAN:
+        return (crc & 0x00ff) << 8 | (crc & 0xff00) >> 8
 
-        if sigbit == Endianness.BIG_ENDIAN:
-            return (crc & 0x00ff) << 8 | (crc & 0xff00) >> 8
-
-        return (crc & 0xff00) >> 8 | (crc & 0x00ff) << 8
+    return (crc & 0xff00) >> 8 | (crc & 0x00ff) << 8
 
 
 ''' Tableless algo in Python and Rust

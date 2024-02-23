@@ -6,7 +6,6 @@ import binascii
 import logging
 import datetime
 
-from PyCRC.CRC16Kermit import CRC16Kermit
 from utils import Crc
 from multiprocessing import log_to_stderr
 
@@ -168,10 +167,9 @@ class Sas:
             buf_header.extend(command)
 
             if crc_need:
-                crc = CRC16Kermit().calculate(bytes(buf_header))
+                crc = Crc.calculate(bytes(buf_header))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
                 print([((crc >> 8) & 0xFF), (crc & 0xFF)])
-                print(Crc.calculate(bytes(buf_header), 0))
 
             self.connection.write([self.poll_address, self.address])
 
