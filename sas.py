@@ -213,7 +213,7 @@ class Sas:
             raise NoSasConnection
 
         tmp_crc = binascii.hexlify(rsp[-2:])
-        crc1 = CRC16Kermit().calculate(rsp[0:-2])
+        crc1 = Crc.calculate(rsp[0:-2])
         crc1 = hex(crc1).zfill(4)
         crc1 = bytes(crc1, "utf-8")[2:]
 
