@@ -2,22 +2,22 @@ from enum import Enum
 from ctypes import c_ushort
 
 MAGIC_SEED = 0x8408
-value_table = []
+table = []
+
 
 class Endianness(Enum):
     LITTLE_ENDIAN = 0
     BIG_ENDIAN = 1
 
 
-if not len(value_table):
-    for i in range(0, 256):
-        crc = c_ushort(i).value
-        for j in range(0, 8):
-            if crc & 0x0001:
-                crc = c_ushort(crc >> 1).value ^ MAGIC_SEED
-            else:
-                crc = c_ushort(crc >> 1).value
-        value_table.append(hex(crc))
+for i in range(0, 256):
+    val = c_ushort(i).value
+    for j in range(0, 8):
+        if val & 0x0001:
+            val = c_ushort(val >> 1).value ^ MAGIC_SEED
+        else:
+            val = c_ushort(val >> 1).value
+    table.append(hex(val))
 
 
 def calculate(payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
@@ -25,7 +25,7 @@ def calculate(payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
 
     for c in payload:
         q = _crc ^ c
-        _crc = c_ushort(_crc >> 8).value ^ int(self.value_table[(q & 0x00ff)], 0)
+        _crc = c_ushort(_crc >> 8).value ^ int(table[(q & 0x00ff)], 0)
 
     if sigbit == Endianness.BIG_ENDIAN:
         return (_crc & 0x00ff) << 8 | (_crc & 0xff00) >> 8
