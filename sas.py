@@ -211,7 +211,7 @@ class Sas:
         if rsp == "":
             raise NoSasConnection
 
-        mac_crc = [int.from_bytes(rsp[-2:0]), int.from_bytes(rsp[-4:-2])]
+        mac_crc = [int.from_bytes(rsp[-1:]), int.from_bytes(rsp[-2:-1])]
         my_crc = Crc.calculate(rsp[0:-2])
 
         print(mac_crc, my_crc)
