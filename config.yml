@@ -1,5 +1,5 @@
 connection:
-  serial_port: /dev/serial0
+  serial_port: /dev/ttyUSB0
   timeout: 2
   baudrate: 19200
   infinite: False
