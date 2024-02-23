@@ -3,7 +3,6 @@ from ctypes import c_ushort
 
 MAGIC_SEED = 0o10201
 
-
 class Endianness(Enum):
     LITTLE_ENDIAN = 0
     BIG_ENDIAN = 1
@@ -14,7 +13,7 @@ def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
 
     for byte in payload:
         x = c_ushort(byte)
-        y = (crc ^ x) & 0o17
+        y = (crc ^ int(x)) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
         y = (crc ^ (x >> 8)) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
