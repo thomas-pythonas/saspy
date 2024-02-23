@@ -13,13 +13,13 @@ def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
     crc, y = init, 0
 
     for byte in payload:
-        x = byte << 4
+        x = byte << 8
         y = (crc ^ x) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
         y = (crc ^ (x >> 8)) & 0o17
         crc = (crc >> 8) ^ (y * MAGIC_SEED)
 
-    if sigbit == Endianness.LITTLE_ENDIAN:
+    if sigbit == Endianness.BIG_ENDIAN:
         return crc & 0xFF, (crc >> 8) & 0xFF
 
     return (crc >> 8) & 0xFF, crc & 0xFF
