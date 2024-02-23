@@ -211,12 +211,10 @@ class Sas:
         if rsp == "":
             raise NoSasConnection
 
-        tmp_crc = binascii.hexlify(rsp[-2:])
-        crc1 = Crc.calculate(rsp[0:-2])
-        crc1 = hex(crc1).zfill(4)
-        crc1 = bytes(crc1, "utf-8")[2:]
+        mac_crc = binascii.hexlify(rsp[-2:])
+        my_crc = Crc.calculate(rsp[0:-2])
 
-        if tmp_crc != crc1:
+        if mac_crc != my_crc:
             raise BadCRC(binascii.hexlify(rsp))
         else:
             return rsp[1:-2]
