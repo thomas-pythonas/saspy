@@ -13,10 +13,7 @@ class Endianness(Enum):
 for i in range(0, 256):
     val = c_ushort(i).value
     for j in range(0, 8):
-        if val & 0x0001:
-            val = c_ushort(val >> 1).value ^ MAGIC_SEED
-        else:
-            val = c_ushort(val >> 1).value
+        val = c_ushort(val >> 1).value ^ MAGIC_SEED if val & 0x0001 else c_ushort(val >> 1).value
     table.append(hex(val))
 
 
@@ -28,9 +25,11 @@ def calculate(payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
         _crc = c_ushort(_crc >> 8).value ^ int(table[(q & 0x00ff)], 0)
 
     if sigbit == Endianness.BIG_ENDIAN:
-        return (_crc & 0x00ff) << 8 | (_crc & 0xff00) >> 8
+        _crc = (_crc & 0x00ff) << 8 | (_crc & 0xff00) >> 8
+    else:
+        _crc = (_crc & 0xff00) >> 8 | (_crc & 0x00ff) << 8
 
-    return (_crc & 0xff00) >> 8 | (_crc & 0x00ff) << 8
+    return [((_crc >> 8) & 0xFF), (_crc & 0xFF)]
 
 
 ''' Tableless algo in Python and Rust

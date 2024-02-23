@@ -167,9 +167,8 @@ class Sas:
             buf_header.extend(command)
 
             if crc_need:
-                crc = Crc.calculate(bytes(buf_header))
-                buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
-                print([((crc >> 8) & 0xFF), (crc & 0xFF)])
+                buf_header.extend(Crc.calculate(bytes(buf_header)))
+                print(buf_header)
 
             self.connection.write([self.poll_address, self.address])
 
