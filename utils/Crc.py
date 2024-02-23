@@ -20,7 +20,7 @@ if not len(value_table):
         value_table.append(hex(crc))
 
 
-def calculate(self, payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
+def calculate(payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
     _crc = init
 
     for c in payload:

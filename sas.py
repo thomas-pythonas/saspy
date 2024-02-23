@@ -167,7 +167,7 @@ class Sas:
             buf_header.extend(command)
 
             if crc_need:
-                crc = Crc.calculate(bytearray(buf_header))
+                crc = Crc.calculate(bytes(buf_header))
                 buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
                 print([((crc >> 8) & 0xFF), (crc & 0xFF)])
 
