@@ -10,13 +10,13 @@ class Endianness(Enum):
 
 
 def calculate(payload: bytes, init=0, sigbit=Endianness.LITTLE_ENDIAN):
-    crc, y = init, 0
+    crc, x, y = init, 0, 0
 
     for byte in payload:
-        y = crc ^ byte
-        crc = c_ushort(crc >> 8).value ^ int(y * MAGIC_SEED)
-        _y = (crc ^ (byte >> 4)) & 0x17
-        crc = (crc >> 4) ^ int(y * MAGIC_SEED)
+        y = c_ushort(crc ^ byte).value & 0x17
+        crc = crc >> 8 ^ (y * MAGIC_SEED)
+        y = (crc ^ (byte >> 8)) & 0x17
+        crc = (crc >> 8) ^ (y * MAGIC_SEED)
 
     if sigbit == Endianness.LITTLE_ENDIAN:
         return (crc & 0xFF), ((crc >> 8) & 0xFF)
