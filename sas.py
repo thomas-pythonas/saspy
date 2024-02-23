@@ -6,7 +6,7 @@ import binascii
 import logging
 import datetime
 
-from PyCRC.CRC16Kermit import CRC16Kermit
+from utils import Crc
 from multiprocessing import log_to_stderr
 
 from models import *
@@ -47,7 +47,7 @@ class Sas:
         self.pos_id = pos_id
         self.transaction = None
         self.my_key = key
-        self.poll_address = poll_address
+        self.poll_address= poll_address
         self.perpetual = perpetual
 
         # Init the Logging system
@@ -139,7 +139,7 @@ class Sas:
             raise SASOpenError
 
     def _conf_event_port(self):
-        """Do magick to make SAS Happy and work with their effing parity"""
+        """Do magick to make SAS Happy and work with their effing wakeup bit"""
         self.open()
         self.connection.flush()
         self.connection.timeout = self.poll_timeout
@@ -167,8 +167,7 @@ class Sas:
             buf_header.extend(command)
 
             if crc_need:
-                crc = CRC16Kermit().calculate(bytearray(buf_header).decode("utf-8"))
-                buf_header.extend([((crc >> 8) & 0xFF), (crc & 0xFF)])
+                buf_header.extend(Crc.calculate(bytes(buf_header)))
 
             self.connection.write([self.poll_address, self.address])
 
@@ -210,12 +209,10 @@ class Sas:
         if rsp == "":
             raise NoSasConnection
 
-        tmp_crc = binascii.hexlify(rsp[-2:])
-        crc1 = CRC16Kermit().calculate(rsp[0:-2])
-        crc1 = hex(crc1).zfill(4)
-        crc1 = bytes(crc1, "utf-8")[2:]
+        mac_crc = [int.from_bytes(rsp[-2:-1]), int.from_bytes(rsp[-1:])]
+        my_crc = Crc.calculate(rsp[0:-2])
 
-        if tmp_crc != crc1:
+        if mac_crc != my_crc:
             raise BadCRC(binascii.hexlify(rsp))
         else:
             return rsp[1:-2]
