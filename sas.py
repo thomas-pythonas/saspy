@@ -214,6 +214,7 @@ class Sas:
         mac_crc = binascii.hexlify(rsp[-2:])
         my_crc = Crc.calculate(rsp[0:-2])
 
+        print(mac_crc, my_crc)
         if mac_crc != my_crc:
             raise BadCRC(binascii.hexlify(rsp))
         else:
