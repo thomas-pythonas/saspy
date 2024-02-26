@@ -2867,12 +2867,14 @@ class SAS_USB(Sas):
 
 
 if __name__ == '__main__':
-    sas = Sas('/dev/ttyS4')
+    sas = Sas('/dev/ttyUSB0')
     print(sas.start())
     print(sas.gaming_machine_ID())
     sas.transaction = sas.AFT_get_last_transaction()
     print(sas.transaction)
     print(sas.send_meters_10_15())
     print(sas.events_poll())
+    print(sas.AFT_in(15))
     print(sas.AFT_clean_transaction_poll())
-    print(sas.total_dollar_value_of_bills_meter())
+    print(sas.send_meters_10_15())
+
