@@ -1,5 +1,6 @@
 from enum import Enum
 from ctypes import c_ushort
+from error_handler import NoSasConnection, BadCRC
 
 MAGIC_SEED = 0x8408
 table = []
@@ -30,6 +31,19 @@ def calculate(payload=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
         _crc = (_crc & 0xff00) >> 8 | (_crc & 0x00ff) << 8
 
     return [((_crc >> 8) & 0xFF), (_crc & 0xFF)]
+
+def validate(check=None, init=0, sigbit=Endianness.LITTLE_ENDIAN):
+    """Function in charge of the CRC Check"""
+    if check == "":
+        raise NoSasConnection
+
+    rcvd_crc = [int.from_bytes(check[-2:-1]), int.from_bytes(check[-1:])]
+    my_crc = calculate(check[0:-2], init=init, sigbit=sigbit)
+
+    if rcvd_crc != my_crc:
+        raise BadCRC(hex(check))
+    else:
+        return check[1:-2]
 
 
 ''' Tableless algo in Python and Rust

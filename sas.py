@@ -7,6 +7,7 @@ import logging
 import datetime
 
 from utils import Crc
+from utils.Decorators import deprecated
 from multiprocessing import log_to_stderr
 
 from models import *
@@ -189,7 +190,7 @@ class Sas:
                     self.log.critical("no sas response %s" % (str(buf_header[1:])))
                     return None
 
-            response = self._check_response(response)
+            response = Crc.validate(response)
 
             self.log.debug("sas response %s", binascii.hexlify(response))
 
@@ -203,7 +204,7 @@ class Sas:
 
         return None
 
-    @staticmethod
+    @deprecated("use utils.Crc validation fuction")
     def _check_response(rsp):
         """Function in charge of the CRC Check"""
         if rsp == "":
