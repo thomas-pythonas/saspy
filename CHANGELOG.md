@@ -1,17 +1,20 @@
 # CHANGELOG
 
 
-## Unreleased
+
+## v0.0.0 (2024-03-02)
 
 ### Chore
 
+* chore: adding ci for semantic-release ([`cfd0202`](https://github.com/zacharytomlinson/saspy/commit/cfd0202ec5c8003c2430bab5ea0d4da13eefd8e2))
+
 * chore: readme update to integrate readthedocs
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`a0958ac`](https://github.com/zacharytomlinson/saspy/commit/a0958acdc8fe9be2b81baa7bd81aa347552dd2d4))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`a0958ac`](https://github.com/zacharytomlinson/saspy/commit/a0958acdc8fe9be2b81baa7bd81aa347552dd2d4))
 
 * chore: readthedocs should work now
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`d7c4afb`](https://github.com/zacharytomlinson/saspy/commit/d7c4afb108b2368f41fd355352cdb1fb63ec02de))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`d7c4afb`](https://github.com/zacharytomlinson/saspy/commit/d7c4afb108b2368f41fd355352cdb1fb63ec02de))
 
 * chore: way to much to summarize.
 
@@ -20,7 +23,7 @@ Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`d7c4afb`](https
 - Fixed wrong mapping (again)
 - cleaned code (again)
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`84b9bde`](https://github.com/zacharytomlinson/saspy/commit/84b9bdeb21d204977144d86f5da78bfc66bb8d2a))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`84b9bde`](https://github.com/zacharytomlinson/saspy/commit/84b9bdeb21d204977144d86f5da78bfc66bb8d2a))
 
 * chore: way to much to summarize.
 
@@ -31,23 +34,23 @@ Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`84b9bde`](https
 - cleaned code
 - i dont remember what else i did....sorry
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`86728d1`](https://github.com/zacharytomlinson/saspy/commit/86728d1899c946be23947363bb8a33653532901c))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`86728d1`](https://github.com/zacharytomlinson/saspy/commit/86728d1899c946be23947363bb8a33653532901c))
 
 * chore(feat): Added &#34;perpetual&#34; or &#34;infinite&#34; mode where if true the lib will try forever to connect to the vlt. Default value is False
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`4eb40b6`](https://github.com/zacharytomlinson/saspy/commit/4eb40b674c325a68d0eb8bf131972f9eec3896eb))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`4eb40b6`](https://github.com/zacharytomlinson/saspy/commit/4eb40b674c325a68d0eb8bf131972f9eec3896eb))
 
 * chore: updated the example in accordance with new features
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`da94329`](https://github.com/zacharytomlinson/saspy/commit/da94329310b9c334ef547246aa8f3d242254daea))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`da94329`](https://github.com/zacharytomlinson/saspy/commit/da94329310b9c334ef547246aa8f3d242254daea))
 
 * chore: updated, again, config.yml to avoid type coercion during config var retrieval
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`df773db`](https://github.com/zacharytomlinson/saspy/commit/df773db80d8b3830b2f1ea2d02d6151335760c04))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`df773db`](https://github.com/zacharytomlinson/saspy/commit/df773db80d8b3830b2f1ea2d02d6151335760c04))
 
 * chore: fix function is_open, was calling a wrong method. How the heck did it work till now ?
 
-Signed-off-by: Antonio D&#39;Angelo &lt;mail@redacted.com&gt; ([`566bf17`](https://github.com/zacharytomlinson/saspy/commit/566bf179709c2776ba72d7a4c00e4a34398fd866))
+Signed-off-by: Antonio D&#39;Angelo &lt;antonio.dangelo@wtbss.com&gt; ([`566bf17`](https://github.com/zacharytomlinson/saspy/commit/566bf179709c2776ba72d7a4c00e4a34398fd866))
 
 * chore: updated config.yml in order to be more in line with common settings and updated default timeout as said by @dedalgr ([`c886351`](https://github.com/zacharytomlinson/saspy/commit/c8863518f232b8b5743a082782869ee947252391))
 
@@ -105,7 +108,19 @@ Added logo for library ([`ce40a2d`](https://github.com/zacharytomlinson/saspy/co
 
 * chore: fix typo, var/func naming confusion, restructure of the project, config management, readme update, added requirements, small fixes ([`50e14c5`](https://github.com/zacharytomlinson/saspy/commit/50e14c58450740a229fb5f833a982a7df82253c0))
 
+### Documentation
+
+* docs: adding changelog ([`8c540c8`](https://github.com/zacharytomlinson/saspy/commit/8c540c8f11ff3cd5795aa08bcd977625203d7548))
+
 ### Unknown
+
+* Merge pull request #27 from zacharytomlinson/zmt/crc-validate-utilfunc ([`e551937`](https://github.com/zacharytomlinson/saspy/commit/e5519376d1a5f3e70db9ed25b0cedd0b7abc9197))
+
+* Moved crc check to util class and added a deprecation annotation so we don&#39;t have to implement breaking changes instantly ([`1668cff`](https://github.com/zacharytomlinson/saspy/commit/1668cffc8ffaa355cb0c26e934ffd94f2b641316))
+
+* Merge pull request #26 from zacharytomlinson/gh-workflows-changelog
+
+GitHub Workflows and Changelog ([`94f8b99`](https://github.com/zacharytomlinson/saspy/commit/94f8b99e7fa2c070628602aa95ab1943e0aac3ae))
 
 * Merge pull request #25 from zacharytomlinson/zacharytomlinson-crc-adhoc
 
@@ -333,4 +348,3 @@ Check crc method ([`89065e3`](https://github.com/zacharytomlinson/saspy/commit/8
 * Fixed CRC bug ([`d5e2bae`](https://github.com/zacharytomlinson/saspy/commit/d5e2bae849c6a60dcb22c48720ab519ed1a1a25e))
 
 * Initial commit ([`35a3b74`](https://github.com/zacharytomlinson/saspy/commit/35a3b74917223682fac75b5ef642283681009df2))
-
