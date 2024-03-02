@@ -35,13 +35,14 @@ class Sas:
             pos_id="B374A402",  # Pos ID
             key="44",  # Key
             debug_level="DEBUG",  # Debug Level
-            perpetual=False  # When this is true the lib will try forever to connect to the serial
+            perpetual=False,  # When this is true the lib will try forever to connect to the serial
+            check_last_transaction = True
     ):
         # Let's address some internal var
         self.poll_timeout = timeout
         self.address = None
         self.machine_n = None
-        self.aft_get_last_transaction = True
+        self.check_last_transaction = check_last_transaction
         self.denom = denom
         self.asset_number = asset_number
         self.reg_key = reg_key
@@ -2781,7 +2782,7 @@ class Sas:
             if hex(self.transaction)[2:-1] == response["Transaction ID"]:
                 return response
             else:
-                if self.aft_get_last_transaction:
+                if self.check_last_transaction:
                     raise BadTransactionID(
                         "last: %s, new:%s "
                         % (hex(self.transaction)[2:-1], response["Transaction ID"])
