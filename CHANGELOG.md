@@ -2,6 +2,21 @@
 
 
 
+## v0.0.1 (2024-03-02)
+
+### Fix
+
+* fix: adding var and function renaming
+
+check_last_transaction it must be modifiable. There are machines that… ([`eac5177`](https://github.com/zacharytomlinson/saspy/commit/eac51775421e621f93945e589d870ea7f700d6e5))
+
+### Unknown
+
+* check_last_transaction it must be modifiable. There are machines that change the transaction number after receiving the signal, but there are also machines that will change the number after responding with Full transfer successful to aft_clean_transaction_poll.
+With this option, you are deprived of one check, but you avoid an unexpected error occurring at an inconvenient moment.
+Use check_last_transaction=False only for machines that do not change a transaction number ([`cf68fd7`](https://github.com/zacharytomlinson/saspy/commit/cf68fd71314686cc7ddcc2e9b708e246f3e7e61a))
+
+
 ## v0.0.0 (2024-03-02)
 
 ### Chore
