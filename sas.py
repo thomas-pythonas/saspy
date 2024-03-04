@@ -100,7 +100,7 @@ class Sas:
         except Exception as e:
             self.log.error(e, exc_info=True)
 
-        self.close()
+        #self.close()
 
     def start(self):
         """Warm Up the connection to the VLT"""
