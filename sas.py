@@ -418,7 +418,7 @@ class BadCRC(Exception):
     pass
 
 
-class BadCommand(Exception):
+class BadCommandIsRunning(Exception):
     pass
 
 
@@ -444,13 +444,13 @@ class EMGGpollBadResponse(Exception):
 
 class Sas():
 
-    def __init__(self, port, timeout=2, log=None, poll_adress=0x82, aft_get_last_transaction=True, sas_dump=False):
+    def __init__(self, port, timeout=2, log=None, poll_adress=0x82, aft_get_last_transaction=True, sas_dump=False, denom=0.01):
         # self.poll_adres = '82'
         self.adress = None
         self.mashin_n = None
         self.aft_get_last_transaction = aft_get_last_transaction
         # self.last_transaction_n = None
-        self.denom = 0.01
+        self.denom = denom
         self.asset_number = '01000000'
         self.reg_key = '0000000000000000000000000000000000000000'
         self.POS_ID = 'B374A402'
@@ -459,6 +459,7 @@ class Sas():
         self.poll_adress = poll_adress
         self.sas_dump = sas_dump
         self.timeout = timeout
+        self.last_gpoll_event = None
         if self.sas_dump:
             os.system('sudo touch /var/log/sas_dump.log')
             os.system('sudo chown colibri:colibri /var/log/sas_dump.log')
@@ -491,7 +492,7 @@ class Sas():
             self.connection.reset_output_buffer()
         except Exception as e:
             self.log.error(e, exc_info=True)
-        self.close()
+        # self.close()
 
     def flush(self):
         try:
@@ -658,6 +659,7 @@ class Sas():
             # self.my_log = open('/var/log/sas_dump.log', 'w')
             # print self.connection.portstr
             # self.connection.write([0x31, 0x32,0x33,0x34,0x35])
+            time.sleep(0.01)
             self.connection.write(buf_header[1:])
 
         except Exception as e:
@@ -670,7 +672,6 @@ class Sas():
             #     response += self.connection.read()
             #     if len(response) == size:
             #         break
-            self.flushInput()
             response = self.connection.read(size)
             if no_response == True:
                 try:
@@ -679,6 +680,10 @@ class Sas():
                 except ValueError as e:
                     self.log.warning('no sas response %s' % (str(buf_header[1:])))
                     return None
+            else:
+                if int(binascii.hexlify(response)[2:4], 16) != buf_header[1]:
+                    raise BadCommandIsRunning('response %s run %s' % (binascii.hexlify(response), binascii.hexlify(bytearray(buf_header))))
+
             #     else:
             #         # response += self.connection.read(size)
             #         if (self.checkResponse(response, size) is False):
@@ -691,9 +696,8 @@ class Sas():
             #     return None
 
             busy = False
-            self.flushInput()
-            response = self.checkResponse(response, binascii.hexlify(bytearray(buf_header)))
             self.log.debug('sas response %s', binascii.hexlify(response))
+            response = self.checkResponse(response, binascii.hexlify(bytearray(buf_header)))
             if not response:
                 response = None
                 # self.log.info('no sas response')
@@ -777,6 +781,10 @@ class Sas():
             # self.my_log.write('RX %s: %s\n' % (time.time(), event.encode('hex')))
             # self.my_log.flush()
             event = GPOLL[event.hex()]
+            if self.last_gpoll_event != event:
+                self.last_gpoll_event = event
+            else:
+                event = 'No activity'
         except KeyError as e:
             raise EMGGpollBadResponse
         except Exception as e:
@@ -2867,14 +2875,14 @@ class SAS_USB(Sas):
 
 
 if __name__ == '__main__':
-    sas = Sas('/dev/ttyUSB0')
+    sas = Sas('/dev/ttyS4')
     print(sas.start())
     print(sas.gaming_machine_ID())
     sas.transaction = sas.AFT_get_last_transaction()
     print(sas.transaction)
     print(sas.send_meters_10_15())
     print(sas.events_poll())
-    print(sas.AFT_in(15))
+    print(sas.AFT_in(1))
     print(sas.AFT_clean_transaction_poll())
     print(sas.send_meters_10_15())
 
