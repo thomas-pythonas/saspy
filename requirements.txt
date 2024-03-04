@@ -1,0 +1,5 @@
+pythoncrc
+pyserial
+pytest
+pytest-sugar
+pyyaml

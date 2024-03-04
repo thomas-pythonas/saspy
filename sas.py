@@ -1,1953 +1,3510 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
-import bcd
 import serial
 import time
 import binascii
-#import string
-from PyCRC.CRC16Kermit import CRC16Kermit
-from array import array
-#ser = serial.Serial('/dev/ttyS3','19200', timeout=1)  # open first serial port
-data_to_sent=[0x01, 0x21, 0x00, 0x00]
-#adress=1
-#print "OK"
-meters = dict.fromkeys(('total_cancelled_credits_meter',
-                'total_in_meter',
-                'total_out_meter',
-                'total_in_meter',
-                'total_jackpot_meter',
-                'games_played_meter',
-                'games_won_meter',
-                'games_lost_meter',
-                'games_last_power_up',
-                'games_last_slot_door_close',
-                'slot_door_opened_meter',
-                'power_reset_meter',
-                's1_bills_accepted_meter',
-                's5_bills_accepted_meter',
-                's10_bills_accepted_meter',
-                's20_bills_accepted_meter',
-                's50_bills_accepted_meter',
-                's100_bills_accepted_meter',
-                's500_bills_accepted_meter',
-                's1000_bills_accepted_meter',
-                's200_bills_accepted_meter',
-                's25_bills_accepted_meter',
-                's2000_bills_accepted_meter',
-                's2500_bills_accepted_meter',
-                's5000_bills_accepted_meter',
-                's10000_bills_accepted_meter',
-                's20000_bills_accepted_meter',
-                's25000_bills_accepted_meter',
-                's50000_bills_accepted_meter',
-                's100000_bills_accepted_meter',
-                's250_bills_accepted_meter',
-                'cashout_ticket_number',
-                'cashout_amount_in_cents',
-                'ASCII_game_ID',
-                'ASCII_additional_ID',
-                'bin_denomination',
-                'bin_max_bet',
-                'bin_progressive_mode',
-                'bin_game_options',
-                'ASCII_paytable_ID',
-                'ASCII_base_percentage',
-                'bill_meter_in_dollars',
-                'ROM_signature',
-                'current_credits',
-                'bin_level',
-                'amount',
-                'partial_pay_amount',
-                'bin_reset_ID',
-                'bill_meter_in_dollars',
-                'true_coin_in',
-                'true_coin_out',
-                'current_hopper_level',
-                'credit_amount_of_all_bills_accepted',
-                'coin_amount_accepted_from_external_coin_acceptor',
-                'country_code',
-                'bill_denomination',
-                'meter_for_accepted_bills',
-                'number_bills_in_stacker',
-                'credits_SAS_in_stacker',
-                'machine_ID',
-                'sequence_number',
-                'validation_type',
-                'index_number',
-                'date_validation_operation',
-                'time_validation_operation',
-                'validation_number',
-                'ticket_amount',
-                'ticket_number',
-                'validation_system_ID',
-                'expiration_date_printed_on_ticket',
-                'pool_id',
-                'current_hopper_lenght',
-                'current_hopper_ststus',
-                'current_hopper_percent_full',
-                'current_hopper_level',
-                'bin_validation_type',
-                'total_validations',
-                'cumulative_amount',
-                'total_number_of_games_impemented',
-                'game_n_number',
-                'game_n_coin_in_meter',
-                'game_n_coin_out_meter',
-                'game_n_jackpot_meter',
-                'geme_n_games_played_meter',
-                'game_n_number_config',
-                'game_n_ASCII_game_ID',
-                'game_n_ASCII_additional_id',
-                'game_n_bin_denomination',
-                'game_n_bin_max_bet',
-                'game_n_bin_progressive_group',
-                'game_n_bin_game_options',
-                'game_n_ASCII_paytable_ID',
-                'game_n_ASCII_base_percentage',
-                'ASCII_SAS_version',
-                'ASCII_serial_number',
-                'selected_game_number',
-                'number_of_enabled_games',
-                'enabled_games_numbers',
-                'cashout_type',
-                'cashout_amount',
-                'ticket_status',
-                'ticket_amount',
-                'parsing_code',
-                'validation_data',
-                'registration_status',
-                'asset_number',
-                'registration_key',
-                'POS_ID',
-                'game_lock_status',
-                'avilable_transfers',
-                'host_cashout_status',
-                'AFT_ststus',
-                'max_buffer_index',
-                'current_cashable_amount',
-                'current_restricted_amount',
-                'current_non_restricted_amount',
-                'restricted_expiration',
-                'restricted_pool_ID',
-                'game_number',
-                'features_1',
-                'features_2',
-                'features_3'
-
-
-                ),[])
-aft_statement=dict.fromkeys((
-                 'registration_status',
-                 'asset_number',
-                 'registration_key',
-                 'POS_ID',
-                 'transaction_buffer_position',
-                 'transfer_status',
-                 'receipt_status',
-                 'transfer_type',
-                 'cashable_amount',
-                 'restricted_amount',
-                 'nonrestricted_amount',
-                 'transfer_flags',
-                 'asset_number',
-                 'transaction_ID_lenght',
-                 'transaction_ID',
-                 'transaction_date',
-                 'transaction_time',
-                 'expiration',
-                 'pool_ID',
-                 'cumulative_casable_amount_meter_size',
-                 'cumulative_casable_amount_meter',
-                 'cumulative_restricted_amount_meter_size',
-                 'cumulative_restricted_amount_meter',                 
-                 'cumulative_nonrestricted_amount_meter_size',
-                 'cumulative_nonrestricted_amount_meter',
-                 'asset_number',
-                 'game_lock_status',
-                 'avilable_transfers',
-                 'host_cashout_status',
-                 'AFT_status',
-                 'max_buffer_index',
-                 'current_cashable_amount',
-                 'current_restricted_amount',
-                 'current_non_restricted_amount',
-                 'restricted_expiration',
-                 'restricted_pool_ID',
-
-                 
-             
-
-        ),[])
-tito_statement=dict.fromkeys((
-        'asset_number',
-        'status_bits',
-        'cashable_ticket_reciept_exp',
-        'restricted_ticket_exp',
-        'cashout_ticket_number',
-        'cashout_amount_in_cents',
-        'machine_ID',
-        'sequence_number'
-        'cashout_type',
-        'cashout_amount',
-        'validation_type',
-        'index_number',
-        'date_validation_operation',
-        'time_validation_operation',
-        'validation_number',
-        'ticket_amount',
-        'ticket_number',
-        'validation_system_ID',
-        'expiration_date_printed_on_ticket' 
-        'pool_id'
-        ),[])
-
-
-eft_statement=dict.fromkeys((
-        'eft_status',
-        'promo_amount',
-        'cashable_amount',
-        'eft_transfer_counter'
-
-        ),[])
-game_features=dict.fromkeys((
-        'game_number',
-        'jackpot_multiplier',
-        'AFT_bonus_avards',
-        'legacy_bonus_awards',
-        'tournament',
-        'validation_extensions',
-        'validation_style',
-        'ticket_redemption'
-        ),[])
-class sas(object):
-        adress=1
-        
-        def __init__(self, port):
-                try:
-                        #print 1
-                        self.connection=serial.Serial(port=port,baudrate=19200, timeout=2)
-                except:
-                        print "port error"
-                return
-        def start(self):
-                print 'Connecting SAS...'
-                while True:
-                        response =self.connection.read(1)
-                        if (response<>''):
-                                self.adress=int(binascii.hexlify(response))
-                                if self.adress>=1:
-                                        print 'adress recognised '+str(self.adress)
-                                        break
-                                
-                        #print str(binascii.hexlifyself.adress))
-                        time.sleep(.5)
-                
-                self.gaming_machine_ID()
-                print meters.get('ASCII_game_ID')
-                print meters.get('ASCII_additional_ID')
-                print meters.get('bin_denomination')
-                print meters.get('bin_max_bet')
-                print meters.get('bin_progressive_mode')
-                print meters.get('bin_game_options')
-                print meters.get('ASCII_paytable_ID')
-                print meters.get('ASCII_base_percentage')
-                self.SAS_version_gaming_machine_serial_ID()
-                print meters.get('ASCII_SAS_version')
-                print meters.get('ASCII_serial_number')
-                self.enabled_features() #todo
-                
-                # 7e date_time_add
-                self.AFT_register_gaming_machine(reg_code=0xff)
-                print aft_statement.get('registration_status')
-                print aft_statement.get('asset_number')
-                print aft_statement.get('registration_key')
-                print aft_statement.get('POS_ID')
-
-                
-                
-                
-                return True
-        
-        def __send_command( self, command, no_response=False, timeout=3, crc_need=True):
-                busy = True
-                response=b''
-                try:
-                        buf_header=[self.adress]
-                        buf_header.extend(command)
-                        buf_count=len(command)
-                        #buf_header[2]=buf_count+2
-                        if (crc_need==True):
-                                crc=CRC16Kermit().calculate(str(bytearray(buf_header)))
-                                buf_header.extend([((crc>>8)&0xFF),(crc&0xFF)])
-                        #print buf_header
-                        print buf_header
-                        #print self.connection.portstr
-                        #self.connection.write([0x31, 0x32,0x33,0x34,0x35])
-                        self.connection.write((buf_header))
-                        
-                except Exception as e:
-                        print e
-
-                try:
-                        buffer = []
-                        self.connection.flushInput()
-                        t=time.time()
-                        while time.time()-t<timeout:
-                                response +=self.connection.read()
-                                #print binascii.hexlify(response)
-                                if (self.checkResponse(response)<>False):
-                                        break
-
-                        if time.time()-t>=timeout:
-                                print "timeout waiting response"
-                                #buffer.append(response)
-                                #print binascii.hexlify(bytearray(response))
-                                return None
-
-                        busy = False
-                        return self.checkResponse(response)
-                        #return None
-                except Exception as e:
-                        print e
-
-                busy = False
-                return None
-
-        def checkResponse(self, rsp):
-                if (rsp==''):
-                        print 'not response'
-                        return False
-		
-                resp = bytearray(rsp)
-                #print resp
-                if (resp[0]<>self.adress):
-                        print "wrong ardess or NACK"
-                        return False
-
-                CRC = binascii.hexlify(resp[-2:])
-
-                
-                command = resp[0:-2]
-
-                crc1=crc=CRC16Kermit().calculate(str(bytearray(command)))
-                
-                data = resp[1:-2]
-
-                crc1 = hex(crc1).split('x')[-1]
-
-                while len(crc1)<4:
-                        crc1 = "0"+crc1
-
-                #print crc1
-                #print CRC
-                if(CRC != crc1):
-                    
-                            #print "Wrong response command hash " + str(CRC)
-                            #print        "////" + str(hex(crc1).split('x')[-1])
-                            #print        "////" + str(binascii.hexlify(command))
-                            return False
-                print binascii.hexlify(data)
-                return data
-##        def check_crc(self):
-##                cmd=[0x01, 0x50, 0x81]
-##                cmd=bytearray(cmd)
-##                #print self.sas_CRC([0x01, 0x50, 0x81])
-##                #print ('\\'+'\\'.join(hex(e)[1:] for e in cmd))
-##
-##                print (CRC16Kermit().calculate(str(cmd)))
-##                return 
-        
-        def events_poll(self, timeout=1):
-                event=''
-                cmd=[0x80+self.adress]
-                try:
-                        self.connection.write(cmd) 
-                        t=time.time()
-                        while time.time()-t<timeout:
-                            #print "time"+ str(time.time()-t)
-                                event =self.connection.read()
-                                if event!='':
-                                        break
-                        
-
-                except Exception as e:
-                        print e
-                        return None
-                return event
-        
-        
-        def shutdown(self):
-                #01
-                #print "1"
-                if (self.__send_command([0x01],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def startup(self, timeout=0.2):
-                #02
-                cmd=[self.adress, 0x02]
-                try:
-                        self.connection.write(cmd) 
-                        t=time.time()
-                        while time.time()-t<timeout:
-                            #print "time"+ str(time.time()-t)
-                                event =self.connection.read()
-                                if event!='':
-                                        break
-                        
-
-                except Exception as e:
-                        print e
-                        return None
-                return event
-        
-        def sound_off(self):
-                #03
-                if (self.__send_command([0x03],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def sound_on(self):
-                #04
-                if (self.__send_command([0x04],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def reel_spin_game_sounds_disabled(self):
-                #05
-                if (self.__send_command([0x05],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def enable_bill_acceptor(self):
-                #06
-                if (self.__send_command([0x06],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def disable_bill_acceptor(self):
-                #07
-                if (self.__send_command([0x07],True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def configure_bill_denom(self, bill_denom=[0xFF,0xFF,0xFF], action_flag=[0xff]):
-                #08
-                cmd=[0x08,0x00]
-                ##print str(hex(bill_denom))
-                s='00ffffff'
-                #print bytes.fromhex(((s)))
-                cmd.extend(bill_denom)
-                cmd.extend(action_flag)
-                print cmd
-                if (self.__send_command(cmd,True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                return
-        def en_dis_game(self,  game_number=[1], en_dis=[1]):
-                #09
-                cmd=[0x09]
-                cmd.extend(bytearray(game_number))
-                cmd.extend(bytearray(en_dis))
-                print cmd
-                if (self.__send_command(cmd,True, crc_need=True)[0]==0x80+self.adress):
-                        return "True"
-                else:
-                        return "False"
-                
-                return
-        def enter_maintenance_mode(self):
-                #0A
-                return
-        def exit_maintanance_mode(self):
-                #0B
-                return
-        def en_dis_rt_event_reporting(self):
-                #0E
-                return
-        def send_meters_10_15(self):
-                #0F
-                cmd=[0x0f]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['total_cancelled_credits_meter']=int((binascii.hexlify(bytearray(data[1:5]))))
-                        meters['total_in_meter']=int(binascii.hexlify(bytearray(data[5:9])))
-                        meters['total_out_meter']=int(binascii.hexlify(bytearray(data[9:13])))
-                        meters['total_droup_meter']=int(binascii.hexlify(bytearray(data[13:17])))
-                        meters['total_jackpot_meter']=int(binascii.hexlify(bytearray(data[17:21])))
-                        meters['games_played_meter']=int(binascii.hexlify(bytearray(data[21:25])))
-                        return data
-                return ''
-        def total_cancelled_credits(self):
-                #10
-                cmd=[0x10]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['total_cancelled_credits_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-                        return data                
-                return ''
-        def total_bet_meter(self):
-                #11
-                cmd=[0x11]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['total_bet_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def total_win_meter(self):
-                #12
-                cmd=[0x12]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['total_win_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def total_in_meter(self):
-                #13
-                cmd=[0x13]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['total_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def total_jackpot_meter(self):
-                #14
-                cmd=[0x14]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['total_jackpot_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def games_played_meter(self):
-                #15
-                cmd=[0x15]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['games_played_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def games_won_meter(self):
-                #16
-                cmd=[0x16]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['games_won_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def games_lost_meter(self):
-                #17
-                cmd=[0x17]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['games_lost_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def games_powerup_door_opened(self):
-                #18
-                cmd=[0x18]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['games_last_power_up']=int(binascii.hexlify(bytearray(data[1:3])))
-                        meters['games_last_slot_door_close']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def meters_11_15(self):
-                #19
-                cmd=[0x19]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['total_bet_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-                        meters['total_win_meter']=int(binascii.hexlify(bytearray(data[5:9])))
-                        meters['total_in_meter']=int(binascii.hexlify(bytearray(data[9:13])))
-                        meters['total_jackpot_meter']=int(binascii.hexlify(bytearray(data[13:17])))
-                        meters['games_played_meter']=int(binascii.hexlify(bytearray(data[17:21])))
-                        return data
-                return ''
-        def current_credits(self):
-                #1A
-                cmd=[0x1A]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['current_credits']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def handpay_info(self):
-                #1B
-                cmd=[0x1B]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['bin_progressive_group']=int(binascii.hexlify(bytearray(data[1:2])))
-                        meters['bin_level']=int(binascii.hexlify(bytearray(data[2:3])))
-                        meters['amount']=int(binascii.hexlify(bytearray(data[3:8])))
-                        meters['bin_reset_ID']=int(binascii.hexlify(bytearray(data[8:])))
-                        return data
-                return ''
-        def meters(self):
-                #1C
-                cmd=[0x1C]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['total_bet_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-                        meters['total_win_meter']=int(binascii.hexlify(bytearray(data[5:9])))
-                        meters['total_in_meter']=int(binascii.hexlify(bytearray(data[9:13])))
-                        meters['total_jackpot_meter']=int(binascii.hexlify(bytearray(data[13:17])))
-                        meters['games_played_meter']=int(binascii.hexlify(bytearray(data[17:21])))
-                        meters['games_won_meter']=int(binascii.hexlify(bytearray(data[21:25])))
-                        meters['slot_door_opened_meter']=int(binascii.hexlify(bytearray(data[25:29])))
-                        meters['power_reset_meter']=int(binascii.hexlify(bytearray(data[29:33])))
-
-                        return data
-                return ''
-        def total_bill_meters(self):
-                #1E
-                cmd=[0x1E]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-                        meters['s1_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-                        meters['s5_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[5:9])))
-                        meters['s10_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[9:13])))
-                        meters['s20_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[13:17])))
-                        meters['s50_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[17:21])))
-                        meters['s100_bills_accepted_meter']=int(binascii.hexlify(bytearray(data[21:25])))
- 
-                        return data
-                return ''
-        def gaming_machine_ID(self):
-                #1F
-                cmd=[0x1F]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['ASCII_game_ID']=(((data[1:3])))
-                        meters['ASCII_additional_ID']=(((data[3:6])))
-                        meters['bin_denomination']=int(binascii.hexlify(bytearray(data[6])))
-                        meters['bin_max_bet']=(binascii.hexlify(bytearray(data[7:8])))
-                        meters['bin_progressive_mode']=int(binascii.hexlify(bytearray(data[8:9])))
-                        meters['bin_game_options']=(binascii.hexlify(bytearray(data[9:11])))
-                        meters['ASCII_paytable_ID']=(((data[11:17])))
-                        meters['ASCII_base_percentage']=(((data[17:21])))
-
-                        return data
-                return ''
-        def total_dollar_value_of_bills_meter(self):
-                #20
-                
-                cmd=[0x20]
-                data=self.__send_command(cmd,True, crc_need=False)
-                
-                if(data<>''):
-
-                        meters['bill_meter_in_dollars']=int(binascii.hexlify(bytearray(data[1:])))
-                        
-                        return data
-                return ''
-        def ROM_signature_verification(self):
-                #21
-                
-                cmd=[0x21, 0x00, 0x00]
-                data=self.__send_command(cmd,True, crc_need=True)
-                print data
-                if(data<>None):
-                 
-                        meters['ROM_signature']= int(binascii.hexlify(bytearray(data[1:3])))
-                        print (str(meters.get('ROM_signature')))
-                        return data
-                return False
-
-        def eft_button_pressed(self, state=0):
-                #24
-                
-                cmd=[0x24, 0x03]
-                cmd.append(state)
-                
-                data=self.__send_command(cmd,True, crc_need=True)
-                print data
-                if(data<>None):
-
-                        return data
-                return ''
-                
-        def true_coin_in(self):
-                #2A
-                cmd=[0x2A]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['true_coin_in']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def true_coin_out(self):
-                #2B
-                cmd=[0x2B]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['true_coin_out']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def curr_hopper_level(self):
-                #2C
-                cmd=[0x2C]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['current_hopper_level']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def total_hand_paid_cancelled_credit(self):
-                #2D
-                return
-        def delay_game(self, delay=0x01):
-                #2E
-                cmd=[0x2E]
-##                if (delay[0]<=0xff):
-##                        cmd.extend([0x00])
-                cmd.append(delay)
-                
-
-                #print cmd
-                if (self.__send_command(cmd,True, crc_need=True)[0]==self.adress):
-                        return "True"
-                else:
-                        return "False"
-                
-                return
-        def selected_meters_for_game(self):
-                #2F
-                return
-        def send_1_bills_in_meters(self):
-                #31
-                cmd=[0x31]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s1_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_2_bills_in_meters(self):
-                #32
-                cmd=[0x32]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s2_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''             
-        def send_5_bills_in_meters(self):
-                #33
-                cmd=[0x33]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s5_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_10_bills_in_meters(self):
-                #34
-                cmd=[0x34]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s10_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_20_bills_in_meters(self):
-                #35
-                cmd=[0x35]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s20_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_50_bills_in_meters(self):
-                #36
-                cmd=[0x36]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s50_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_100_bills_in_meters(self):
-                #37
-                cmd=[0x37]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s100_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_500_bills_in_meters(self):
-                #38
-                cmd=[0x38]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s500_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_1000_bills_in_meters(self):
-                #39
-                cmd=[0x39]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s1000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_200_bills_in_meters(self):
-                #3A
-                cmd=[0x3a]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s200_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_25_bills_in_meters(self):
-                #3B
-                cmd=[0x3B]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s25_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_2000_bills_in_meters(self):
-                #3C
-                cmd=[0x3C]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s2000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def cash_out_ticket_info(self):
-                #3D
-                cmd=[0x3D]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        tito_statement['cashout_ticket_number']=int(binascii.hexlify(bytearray(data[1:3])))
-                        tito_statement['cashout_amount_in_cents']=int(binascii.hexlify(bytearray(data[3:])))
-
-                        return data
-                return ''
-        def send_2500_bills_in_meters(self):
-                #3E
-                cmd=[0x3E]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s2500_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_5000_bills_in_meters(self):
-                #3F
-                cmd=[0x3F]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s5000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_10000_bills_in_meters(self):
-                #40
-                cmd=[0x40]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s10000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_20000_bills_in_meters(self):
-                #41
-                cmd=[0x41]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s20000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_25000_bills_in_meters(self):
-                #42
-                cmd=[0x42]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s25000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_50000_bills_in_meters(self):
-                #43
-                cmd=[0x43]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s50000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_100000_bills_in_meters(self):
-                #44
-                cmd=[0x44]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s100000_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def send_250_bills_in_meters(self):
-                #45
-                cmd=[0x45]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['s250_bills_in_meter']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def credit_amount_of_all_bills_accepted(self):
-                #46
-                
-                cmd=[0x46]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>''):
-
-                        meters['credit_amount_of_all_bills_accepted']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def coin_amount_accepted_from_external_coin_acceptor(self):
-                #47
-                cmd=[0x47]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-
-                        meters['coin_amount_accepted_from_external_coin_acceptor']=int(binascii.hexlify(bytearray(data[1:5])))
-
-                        return data
-                return ''
-        def last_accepted_bill_info(self):
-                #48
-                cmd=[0x48]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-                        meters['country_code']=int(binascii.hexlify(bytearray(data[1:2])))
-                        meters['bill_denomination']=int(binascii.hexlify(bytearray(data[2:3])))
-                        meters['meter_for_accepted_bills']=int(binascii.hexlify(bytearray(data[3:6])))
-                        return data
-                return ''
-        def number_of_bills_currently_in_stacker(self):
-                #49
-                cmd=[0x49]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-                        meters['number_bills_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
-                        return data
-                return ''
-        def total_credit_amount_of_all_bills_in_stacker(self):
-                #4A 
-                cmd=[0x49]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-                        meters['credits_SAS_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
-                        return data
-                return ''
-        def set_secure_enhanced_validation_ID(self, MachineID=[0x01,0x01,0x01], seq_num=[0x00,0x00,0x01]):
-                #4C                
-                cmd=[0x4C]
-                
-                cmd.extend(MachineID)
-                cmd.extend(seq_num)
-                cmd=bytearray(cmd)
-                #print str(binascii.hexlify((cmd)))
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        tito_statement['machine_ID']=int(binascii.hexlify(bytearray(data[1:4])))
-                        tito_statement['sequence_number']=int(binascii.hexlify(bytearray(data[4:8])))
-
-                        return data
-                return ''
-        def enhanced_validation_information(self, curr_validation_info=0):
-                #4D
-
-                cmd=[0x4D]
-                
-                #cmd.append(transfer_code)
-                #cmd=cmd.extend(0)
-                #rint str(binascii.hexlify(bytearray(cmd)))
-                cmd.append((curr_validation_info))
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        tito_statement['validation_type']=int(binascii.hexlify(bytearray(data[1:2])))
-                        tito_statement['index_number']=int(binascii.hexlify(bytearray(data[2:3])))
-                        tito_statement['date_validation_operation']=str(binascii.hexlify(bytearray(data[3:7])))
-                        tito_statement['time_validation_operation']=str(binascii.hexlify(bytearray(data[7:10])))
-                        tito_statement['validation_number']=str(binascii.hexlify(bytearray(data[10:18])))
-                        tito_statement['ticket_amount']=int(binascii.hexlify(bytearray(data[18:23])))
-                        tito_statement['ticket_number']=int(binascii.hexlify(bytearray(data[23:25])))
-                        tito_statement['validation_system_ID']=int(binascii.hexlify(bytearray(data[25:26])))
-                        tito_statement['expiration_date_printed_on_ticket']=str(binascii.hexlify(bytearray(data[26:30])))
-                        tito_statement['pool_id']=int(binascii.hexlify(bytearray(data[30:32])))
-
-
-                        return data
-                return ''
-        def current_hopper_status(self):
-                #4F
-
-                cmd=[0x4F]
-                
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-                        meters['current_hopper_lenght']=int(binascii.hexlify(bytearray(data[1:2])))
-                        meters['current_hopper_ststus']=int(binascii.hexlify(bytearray(data[2:3])))
-                        meters['current_hopper_percent_full']=int(binascii.hexlify(bytearray(data[3:4])))
-                        meters['current_hopper_level']=int(binascii.hexlify(bytearray(data[4:])))
-                        return data
-                return ''
-        def validation_meters(self, type_of_validation=0x00):
-                #50
-
-                cmd=[0x50]
-                cmd.append(type_of_validation)
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-                        meters['bin_validation_type']=int(binascii.hexlify(bytearray(data[1])))
-                        meters['total_validations']=int(binascii.hexlify(bytearray(data[2:6])))
-                        meters['cumulative_amount']=str(binascii.hexlify(bytearray(data[6:])))
-
-                        return data
-                return ''
-        def total_number_of_games_impimented(self):
-                #51
-                cmd=[0x51]
-                cmd.extend(type_of_validation)
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        meters['total_number_of_games_impemented']=str(binascii.hexlify(bytearray(data[1:])))
- 
-
-                        return data
-                return ''
-        def game_meters(self, n=1):
-                #52
-
-                cmd=[0x52]
-                cmd.extend([(n&0xFF), ((n>>8)&0xFF)])
-                
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-                        meters['game_n_number']=str(binascii.hexlify(bytearray(data[1:3])))
-                        meters['game_n_coin_in_meter']=str(binascii.hexlify(bytearray(data[3:7])))
-                        meters['game_n_coin_out_meter']=str(binascii.hexlify(bytearray(data[7:11])))
-                        meters['game_n_jackpot_meter']=str(binascii.hexlify(bytearray(data[11:15])))
-                        meters['geme_n_games_played_meter']=str(binascii.hexlify(bytearray(data[15:])))
- 
-
-                        return data
-                return ''
-        def game_configuration(self, n=1):
-                #53
-
-                cmd=[0x53]
-                cmd.extend([(n&0xFF), ((n>>8)&0xFF)])
-                
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-                        meters['game_n_number_config']=int(binascii.hexlify(bytearray(data[1:3])))
-                        meters['game_n_ASCII_game_ID']=str(binascii.hexlify(bytearray(data[3:5])))
-                        meters['game_n_ASCII_additional_id']=str(binascii.hexlify(bytearray(data[5:7])))
-                        meters['game_n_bin_denomination']=str(binascii.hexlify(bytearray(data[7])))
-                        meters['game_n_bin_progressive_group']=str(binascii.hexlify(bytearray(data[8])))
-                        meters['game_n_bin_game_options']=str(binascii.hexlify(bytearray(data[9:11])))
-                        meters['game_n_ASCII_paytable_ID']=str(binascii.hexlify(bytearray(data[11:17])))
-                        meters['game_n_ASCII_base_percentage']=str(binascii.hexlify(bytearray(data[17:])))
- 
-
-                        return data
-                return ''
-        def SAS_version_gaming_machine_serial_ID(self):
-                #54
-                cmd=[0x54]
-                                
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        meters['ASCII_SAS_version']=data[2:5]
-                        meters['ASCII_serial_number']=data[5:]
-                        return data
-                return ''
-        def selected_game_number(self):
-                #55
-                cmd=[0x55]
-                                
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        meters['selected_game_number']=int(binascii.hexlify(bytearray(data[1:])))
-                        return data
-                return ''
-        def enabled_game_numbers(self):
-                #56
-
-                cmd=[0x56]
-                                
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        meters['number_of_enabled_games']=int(binascii.hexlify(bytearray(data[2])))
-                        meters['enabled_games_numbers']=int(binascii.hexlify(bytearray(data[3:])))
-
-                        return data
-                return ''
-        def pending_cashout_info(self):
-                #57
-
-                cmd=[0x57]
-                                
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        tito_statement['cashout_type']=int(binascii.hexlify(bytearray(data[1:2])))
-                        tito_statement['cashout_amount']=str(binascii.hexlify(bytearray(data[2:])))
-
-                        return data
-                return ''
-        def validation_number(self, validationID=1, valid_number=0):
-                #58
-
-                cmd=[0x58]
-                cmd.append(validationID)
-                cmd.extend(self.bcd_coder_array( valid_number,8))
-                print cmd
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-
-                    return data[1]
-                return ''
-        def eft_send_promo_to_machine(self, amount=0, count=1, status=0):
-                #63
-                cmd=[0x63, count, ]
-                #status 0-init 1-end
-                cmd.append(status)
-                cmd.extend(self.bcd_coder_array(amount, 4))
-                data=self.__send_command(cmd,True, crc_need=True)
-
-                if(data<>None):
-                        eft_statement['eft_status']=str(binascii.hexlify(bytearray(data[1:])))
-                        eft_statement['promo_amount']=str(binascii.hexlify(bytearray(data[4:])))
-                       # eft_statement['eft_transfer_counter']=int(binascii.hexlify(bytearray(data[3:4])))
-                     
-
-                        return data[3]
-                return ''
-        def eft_load_cashable_credits(self, amount=0, count=1, status=0):
-                #69
-                cmd=[0x69, count, ]
-                cmd.append(status)
-                cmd.extend(self.bcd_coder_array(amount, 4))
-                data=self.__send_command(cmd,True, crc_need=True)
-
-                if(data<>None):
-                        meters['eft_status']=str(binascii.hexlify(bytearray(data[1:2])))
-                        meters['cashable_amount']=str(binascii.hexlify(bytearray(data[2:5])))
-                     
-
-                        return data[3]
-                return ''
-
-        def eft_avilable_transfers(self):
-                #6A
-                cmd=[0x6A]
-                data=self.__send_command(cmd,True, crc_need=False)
-                if(data<>None):
-                        #meters['number_bills_in_stacker']=int(binascii.hexlify(bytearray(data[1:5])))
-                        return data
-                return ''
-
-
-        def autentification_info(self, action=0, adressing_mode=0, component_name='', auth_method=b'\x00\x00\x00\x00', seed_lenght=0, seed='', offset_lenght=0, offset=''):
-                #6E
-                cmd=[0x6E, 0x00]
-                cmd.append(action)
-                if action==0:
-                        #cmd.append(action)
-                        cmd[1]=1
-                else:
-                        if (action==1 or action==3):
-                                cmd.append(adressing_mode)
-                                cmd.append(len(bytearray(component_name)))
-                                cmd.append (bytearray(component_name))
-                                cmd[1]=len(bytearray(component_name))+3
-                        else:
-                                if action==2:
-                                        cmd.append(adressing_mode)
-                                        cmd.append(len(bytearray(component_name)))
-                                        cmd.append (bytearray(component_name))
-                                        cmd.append(auth_metod)
-                                        cmd.append(seed_lenght)
-                                        cmd.append(bytearray(seed))
-                                        cmd.append(offset_lenght)
-                                        cmd.append(bytearray(offset))
-                                        
-                                        cmd[1]=len(bytearray(offset))+len(bytearray(seed))+len(bytearray(component_name))+6                       
-                        
-
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-
-                    return data[1]
-                return ''
-        def extended_meters_for_game(self, n=1):
-                #6F
-                return
-        def ticket_validation_data(self):
-                #70
-
-                cmd=[0x70]
-
-                data=self.__send_command(cmd,True, crc_need=False)                
-                if(data<>None):
-                        meters['ticket_status']=int(binascii.hexlify(bytearray(data[2:3])))
-                        meters['ticket_amount']=str(binascii.hexlify(bytearray(data[3:8])))
-                        meters['parsing_code']=int(binascii.hexlify(bytearray(data[8:9])))
-                        meters['validation_data']=str(binascii.hexlify(bytearray(data[9:])))
-
-
-                        return data[1]
-                return ''
-        def redeem_ticket(self, transfer_code=0, transfer_amount=0, parsing_code=0, validation_data=0, rescticted_expiration=0, pool_ID=0):
-                #71
-
-                cmd=[0x71, 0x00]
-                cmd.append(transfer_code)
-                cmd.extend(self.bcd_coder_array(transfer_amount, 5))
-                cmd.append(parsing_code)
-                
-                cmd.extend(self.bcd_coder_array(validation_data, 8))
-                cmd.extend(self.bcd_coder_array(rescticted_expiration, 4))
-                cmd.extend(self.bcd_coder_array(pool_ID,2))
-                cmd[1]=8+13
-
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-                        meters['ticket_status']=int(binascii.hexlify(bytearray(data[2:3])))
-                        meters['ticket_amount']=int(binascii.hexlify(bytearray(data[3:8])))
-                        meters['parsing_code']=int(binascii.hexlify(bytearray(data[8:9])))
-                        meters['validation_data']=str(binascii.hexlify(bytearray(data[9:])))
-
-
-                        return data[1]
-                return ''
-        def AFT_transfer_funds(self, transfer_code=0x00, transaction_index=0x00, transfer_type=0x00, cashable_amount=0, restricted_amount=0, non_restricted_amount=0, transfer_flags=0x00, asset_number=b'\x00\x00\x00\x00\x00', registration_key=0, transaction_ID_lenght=0x00, transaction_ID='', expiration=0, pool_ID=0, reciept_data='', lock_timeout=0):
-                #72
-#sas.AFT_transfer_funds(0, 1, 0x60, 10000, 0, 0, 0b00000000,)
-                cmd=[0x72, 0x00]
-                cmd.append(transfer_code)
-                cmd.append(transaction_index)
-                cmd.append(transfer_type)
-                cmd.extend(self.bcd_coder_array(cashable_amount, 5))
-                cmd.extend(self.bcd_coder_array(restricted_amount, 5))
-                cmd.extend(self.bcd_coder_array(non_restricted_amount, 5))
-                cmd.append(transfer_flags)
-                cmd.extend((asset_number))
-                cmd.extend(self.bcd_coder_array(registration_key, 20))
-                cmd.append(len(transaction_ID))
-                cmd.extend(transaction_ID)
-                cmd.extend(self.bcd_coder_array(expiration, 4))
-                cmd.extend(self.bcd_coder_array(pool_ID, 2))
-
-                cmd.append(len(reciept_data))
-                cmd.extend(reciept_data)
-                cmd.extend(self.bcd_coder_array(lock_timeout,2))
-
-                cmd[1]=len(transaction_ID)+len(transaction_ID)+53
-
-                data=self.__send_command(cmd,True, crc_need=True)                
-                if(data<>None):
-                        aft_statement['transaction_buffer_position']=int(binascii.hexlify(bytearray(data[2:3])))
-                        aft_statement['transfer_status']=int(binascii.hexlify(bytearray(data[3:4])))
-                        aft_statement['receipt_status']=int(binascii.hexlify(bytearray(data[4:5])))
-                        aft_statement['transfer_type']=int(binascii.hexlify(bytearray(data[5:6])))
-                        aft_statement['cashable_amount']=int(binascii.hexlify(bytearray(data[6:11])))
-                        aft_statement['restricted_amount']=int(binascii.hexlify(bytearray(data[11:16])))
-                        aft_statement['nonrestricted_amount']=int(binascii.hexlify(bytearray(data[16:21])))
-                        aft_statement['transfer_flags']=int(binascii.hexlify(bytearray(data[21:22])))
-                        aft_statement['asset_number']=(binascii.hexlify(bytearray(data[22:26])))
-                        aft_statement['transaction_ID_lenght']=int(binascii.hexlify(bytearray(data[26:27])))
-                        a=int(binascii.hexlify(bytearray(data[26:27])))
-                        aft_statement['transaction_ID']=str(binascii.hexlify(bytearray(data[27:(27+a+1)])))
-                        a=27+a+1
-                        aft_statement['transaction_date']=str(binascii.hexlify(bytearray(data[a:a+5])))
-                        a=a+5
-                        aft_statement['transaction_time']=str(binascii.hexlify(bytearray(data[a:a+4])))
-                        aft_statement['expiration']=str(binascii.hexlify(bytearray(data[a+4:a+9])))
-                        aft_statement['pool_ID']=str(binascii.hexlify(bytearray(data[a+9:a+11])))
-                        aft_statement['cumulative_casable_amount_meter_size']=(binascii.hexlify(bytearray(data[a+11:a+12])))
-                        b=a+int(binascii.hexlify(bytearray(data[a+11:a+12])))
-                        aft_statement['cumulative_casable_amount_meter']=(binascii.hexlify(bytearray(data[a+12:b+1])))
-                        aft_statement['cumulative_restricted_amount_meter_size']=(binascii.hexlify(bytearray(data[b+1:b+2])))
-                        c=b+2+int(binascii.hexlify(bytearray(data[b+1:b+2])))
-                        aft_statement['cumulative_restricted_amount_meter']=(binascii.hexlify(bytearray(data[b+2:c])))
-                        aft_statement['cumulative_nonrestricted_amount_meter_size']=(binascii.hexlify(bytearray(data[c:c+1])))
-                        b=int(binascii.hexlify(bytearray(data[c:c+1])))+c
-                        aft_statement['cumulative_nonrestricted_amount_meter']=(binascii.hexlify(bytearray(data[c+1:])))
-
-
-                        return data[1]
-                return ''
-        def AFT_register_gaming_machine(self, reg_code=0xff, asset_number=0, reg_key=0, POS_ID=b'\x00\x00\x00\x00'):
-                #73
-                cmd=[0x73, 0x00]
-                if reg_code==0xFF:
-                        cmd.append(reg_code)
-                        cmd[1]=1
-                                                       
-                else:
-                        cmd.append(reg_code)
-                        cmd.extend(self.bcd_coder_array(asset_number, 4))
-                        cmd.extend(self.bcd_coder_array(reg_key, 20))
-                        cmd.extend(self.bcd_coder_array(POS_ID, 4))
-                        cmd[1]=0x1D
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        print len(data)
-                        aft_statement['registration_status']=(binascii.hexlify((data[2:3])))
-                        aft_statement['asset_number']=bytearray(data[3:7])
-                        aft_statement['registration_key']=bytearray(data[7:27])
-                        aft_statement['POS_ID']=str(binascii.hexlify((data[27:])))
-                        return data[1]
-                return ''
-        def AFT_game_lock_and_status_request(self, lock_code=0x00, transfer_condition=0b00000000, lock_timeout=0):
-                #74
-                cmd=[0x74]
-
-                cmd.append(lock_code)
-                cmd.append(transfer_condition)
-                cmd.extend(self.bcd_coder_array(lock_timeout, 2))
-                #cmd.addend(0x23)
-
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        aft_statement['asset_number']=str(binascii.hexlify(bytearray(data[2:6])))
-                        aft_statement['game_lock_status']=str(binascii.hexlify(bytearray(data[6:7])))
-                        aft_statement['avilable_transfers']=str(binascii.hexlify(bytearray(data[7:8])))
-                        aft_statement['host_cashout_status']=str(binascii.hexlify(bytearray(data[8:9])))
-                        aft_statement['AFT_status']=str(binascii.hexlify(bytearray(data[9:10])))
-                        aft_statement['max_buffer_index']=str(binascii.hexlify(bytearray(data[10:11])))
-                        aft_statement['current_cashable_amount']=str(binascii.hexlify(bytearray(data[11:16])))
-                        aft_statement['current_restricted_amount']=str(binascii.hexlify(bytearray(data[16:21])))
-                        aft_statement['current_non_restricted_amount']=str(binascii.hexlify(bytearray(data[21:26])))
-                        aft_statement['restricted_expiration']=str(binascii.hexlify(bytearray(data[26:29])))
-                        aft_statement['restricted_pool_ID']=str(binascii.hexlify(bytearray(data[29:31])))
-                        
-                        return data[1]
-                return ''
-        def set_AFT_reciept_data(self):
-                #75
-                return
-        def set_custom_AFT_ticket_data(self):
-                #76
-                return
-        def exnended_validation_status(self, control_mask=[0,0], status_bits=[0,0], cashable_ticket_reciept_exp=0, restricted_ticket_exp=0):
-                #7B
-                cmd=[0x7B, 0x08]
-
-                cmd.extend(control_mask)
-                cmd.extend(status_bits)
-                cmd.extend(self.bcd_coder_array(cashable_ticket_reciept_exp, 2))
-                cmd.extend(self.bcd_coder_array(restricted_ticket_exp, 2))
-
-                #cmd.addend(0x23)
-
-
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        aft_statement['asset_number']=str(binascii.hexlify(bytearray(data[2:6])))
-                        aft_statement['status_bits']=str(binascii.hexlify(bytearray(data[6:8])))
-                        aft_statement['cashable_ticket_reciept_exp']=str(binascii.hexlify(bytearray(data[8:10])))
-                        aft_statement['restricted_ticket_exp']=str(binascii.hexlify(bytearray(data[10:])))
-                        
-                        return data[1]
-                return ''
-        def set_extended_ticket_data(self):
-                #7C
-                return
-        def set_ticket_data(self):
-                #7D
-                return
-        def current_date_time(self):
-                #7E
-                return
-        def recieve_date_time(self):
-                #7F
-                return
-        def recieve_progressive_amount(self):
-                #80
-                return
-        def cumulative_progressive_wins(self):
-                #83
-                return
-        def progressive_win_amount(self):
-                #84
-                return
-        def SAS_progressive_win_amount(self):
-                #85
-                return
-        def recieve_multiple_progressive_levels(self):
-                #86
-                return
-        def multiple_SAS_progresive_win_amounts(self):
-                #87
-                return
-        def initiate_legacy_bonus_pay(self):
-                #8A
-                return
-        def initiate_multiplied_jackpot_mode(self):
-                #8B
-                return
-        def enter_exit_tournament_mode(self):
-                #8C
-                return
-        def card_info(self):
-                #8E
-                return
-        def physical_reel_stop_info(self):
-                #8F
-                return
-        def legacy_bonus_win_info(self):
-                #90
-                return
-        def remote_handpay_reset(self):
-                #94
-                return
-        def tournament_games_played(self):
-                #95
-                return
-        def tournament_games_won(self):
-                #96
-                return
-        def tournament_credits_wagered(self):
-                #97
-                return
-        def tournament_credits_won(self):
-                #98
-                return
-        def meters_95_98(self):
-                #99
-                return
-        def legacy_bonus_meters(self):
-                #9A
-                return
-        def enabled_features(self, game_nimber=0):
-                #A0
-                cmd=[0xA0]
-               
-                cmd.extend(self.bcd_coder_array(game_nimber, 2))
- 
-                data=self.__send_command(cmd,True, crc_need=True)
-                if(data<>None):
-                        aft_statement['game_number']=str(binascii.hexlify(bytearray(data[1:3])))
-                        aft_statement['features_1']=data[3]
-                        aft_statement['features_2']=data[4]
-                        aft_statement['features_3']=data[5]
-
-                        game_features['game_number']=aft_statement.get('game_number')
-                        if (data[3]&0b00000001):
-                                game_features['jackpot_multiplier']=1
-                        else:
-                                game_features['jackpot_multiplier']=0
-                                
-                        if (data[3]&0b00000010):
-                                game_features['AFT_bonus_avards']=1
-                        else:
-                                game_features['AFT_bonus_avards']=0
-                        if (data[3]&0b00000100):
-                                game_features['legacy_bonus_awards']=1
-                        else:
-                                game_features['legacy_bonus_awards']=0
-                        if (data[3]&0b00001000):
-                                game_features['tournament']=1
-                        else:
-                                game_features['tournament']=0
-                        if (data[3]&0b00010000):
-                                game_features['validation_extensions']=1
-                        else:
-                                game_features['validation_extensions']=0
-                                
-                        game_features['validation_style']=data[3]&0b01100000>>5
-
-                        if (data[3]&0b10000000):
-                                game_features['ticket_redemption']=1
-                        else:
-                                game_features['ticket_redemption']=0
-  
-                               
-
-                        
-                        return data[1]
-                return ''
-        def cashout_limit(self):
-                #A4
-                return
-        def enable_jackpot_handpay_reset_method(self):
-                #A8
-                return
-        def en_dis_game_auto_rebet(self):
-                #AA
-                return
-        def extended_meters_game_alt(self,n=1):
-                #AF
-                return
-        def multi_denom_preamble(self):
-                #B0
-                return
-        def current_player_denomination(self):
-                #B1
-                return
-        def enabled_player_denominations(self):
-                #B2
-                return
-        def token_denomination(self):
-                #B3
-                return
-        def wager_category_info(self):
-                #B4
-                return
-        def extended_game_info(self,n=1):
-                #B5
-                return
-        def event_response_to_long_poll(self):
-                #FF
-                return
-        def bcd_coder_array(self, value=0, lenght=4):
-                return self.int_to_bcd(value, lenght)
-
-        
-        def int_to_bcd(self, number=0, lenght=5):
-                n=0
-                m=0
-                bval=0
-                p=lenght-1
-                result=[]
-                for i in range(0, lenght):
-                        result.extend([0x00]) 
-                while (p>=0):
-                        if (number!=0):
-                                digit=number%10
-                                number=number/10
-                                m=m+1
-                        else:
-                                digit=0
-                        if (n&1):
-                                bval |= digit<<4
-                                result[p]=bval
-                                p=p-1
-                                bval=0
-                        else:
-                                bval=digit
-                        n=n+1
-                return result
-
-        
-if __name__ =="__main__":
-        print "OK"
-        sas=sas('/dev/ttyS3')
-        #print ( bcd.bcd_to_int(100))
-        #print int(bcd.int_to_bcd(0x1467))
-        #a=sas.bcd_coder_array(value=100, lenght=10)
-        #print ((a))
-        print sas.int_to_bcd(1234567890365421,8)
-        #sas.start()
-        #sas.ROM_signature_verification()
-        #sas.total_cancelled_credits()
-        #sas.send_meters_10_15()
-        #sas.total_bet_meter()
-        #sas.total_win_meter()
-        #sas.total_in_meter()
-        #sas.total_jackpot_meter()
-
-
-
-        #sas.SAS_version_gaming_machine_serial_ID()
-
-##        sas.start( )  
-##              
-##        
-##       
-##        
-  #      print sas.events_poll(  timeout=1)  
-##                
-##        
-##        
-##        sas.shutdown( )  
-##                
-##        sas.startup( )  
-##                
-##        sas.sound_off( )  
-##
-##        sas.sound_on( )  
-##
-##        sas.reel_spin_game_sounds_disabled( )  
-## 
-##        sas.enable_bill_acceptor( )  
-##
-##        sas.disable_bill_acceptor( )  
-##
-##        sas.configure_bill_denom( , bill_denom=[0xFF,0xFF,0xFF], action_flag=[0xff])  
-##
-##        sas.en_dis_game( ,  game_number=[1], en_dis=[1])  
-##
-##        sas.enter_maintenance_mode( )  
-##
-##        sas.exit_maintanance_mode( )  
-##
-##        sas.en_dis_rt_event_reporting( )  
-##
-##        sas.send_meters_10_15( )  
-##
-##        sas.total_cancelled_credits( )  
-##
-##        sas.total_bet_meter( )  
-##
-##        sas.total_win_meter( )  
-##
-##        sas.total_in_meter( )  
-##
-##        sas.total_jackpot_meter( )  
-##
-
-
-        
-#        sas.games_played_meter( )  
-##
- #       sas.games_won_meter( )  
-##
-#        sas.games_lost_meter( )  
-##
-  #      sas.games_powerup_door_opened( )  
-##
-  #      sas.meters_11_15( )  
-##
- #       sas.current_credits( )  
-##
- #       sas.handpay_info( )  
-##
- #       sas.meters( )  
-##
- #       sas.total_bill_meters( )  
-##
-#        sas.gaming_machine_ID( )  
-##
-#        sas.total_dollar_value_of_bills_meter( )  
-##
- #       sas.ROM_signature_verification( )  # test usage?
-##
- #       sas.true_coin_in( )  
-##
-#        sas.true_coin_out( )  
-##
-#        sas.curr_hopper_level( )  
-##
- #       sas.total_hand_paid_cancelled_credit( )  #need for maid
-##
-#        sas.delay_game(  delay=1)  # need to test
-##
- #       sas.selected_meters_for_game( )  #need to maid
-##
-#        sas.send_1_bills_in_meters( )  
-##
- #       sas.send_2_bills_in_meters( )  
-##            
- #       sas.send_5_bills_in_meters( )  
-##
-#        sas.send_10_bills_in_meters( )  
-##
- #       sas.send_20_bills_in_meters( )  
-##
-#        sas.send_50_bills_in_meters( )  
-##
- #       sas.send_100_bills_in_meters( )  
-##
- #       sas.send_500_bills_in_meters( )  
-##
- #       sas.send_1000_bills_in_meters( )  
-##
- #       sas.send_200_bills_in_meters( )  
-##
-#        sas.send_25_bills_in_meters( )  
-##
- #       sas.send_2000_bills_in_meters( )  
-##
- #       sas.cash_out_ticket_info( )  
-##
-#        sas.send_2500_bills_in_meters( )  
-##
-#        sas.send_5000_bills_in_meters( )  
-##
-#        sas.send_10000_bills_in_meters( )  
-##
-#        sas.send_20000_bills_in_meters( )  
-##
- #       sas.send_25000_bills_in_meters( )  
-##
-#        sas.send_50000_bills_in_meters( )  
-##
-#        sas.send_100000_bills_in_meters( )  
-##
-#        sas.send_250_bills_in_meters( )  
-##
-#        sas.credit_amount_of_all_bills_accepted( )  
-##
- #       sas.coin_amount_accepted_from_external_coin_acceptor( )  
-##
- #       sas.last_accepted_bill_info( )  
-##
-#        sas.number_of_bills_currently_in_stacker( )  
-##
- #       sas.total_credit_amount_of_all_bills_in_stacker( )  
-##
- #       sas.set_secure_enhanced_validation_ID( MachineID=b'\x01\x00\x01', seq_num=b'\x00\x01\x00')  # read manual
-##
- #       sas.enhanced_validation_information(  curr_validation_info=0x00)  # asc Lena (append)
-##
-#        sas.current_hopper_status( )  
-##
- #       sas.validation_meters( type_of_validation=0x01)  
-##
-##        sas.total_number_of_games_impimented( )  
-##
-##        sas.game_meters( , n=1)  
-## 
-##        sas.game_configuration( , n=1)  
-##
-##        sas.SAS_version_gaming_machine_serial_ID( )  
-##
-##        sas.selected_game_number( )  
-##
-##        sas.enabled_game_numbers( )  
-##
-##        sas.pending_cashout_info( )  
-##
-  #      sas.validation_number( 11, 123456)  
-##
-##        sas.autentification_info( )  
-##
-##        sas.extended_meters_for_game( , n=1)  
-##                #6F
-##          
-##        sas.ticket_validation_data( )  
-##                #70
-##               
-  #      sas.redeem_ticket( )  
-##                #71
-##                
-  #      sas.AFT_transfer_funds(0x00, 0,0x00, 10000, 0, 0, 0, b'\xea\x03\x00\x00', b'\x67\x68\x6a\x68\x62\x76\x79\x64\x6a\x6c\x66\x79\x76\x6d\x6b\x64\x79\x79\x64\x72', transaction_ID_lenght=0x01, transaction_ID='1', expiration=b'\x03\x25\x20\x18', pool_ID=0x1010, reciept_data='fgh', lock_timeout=1)
-#transfer_code=0x00, transaction_index=0x00, transfer_type=0x00, cashable_amount=0, restricted_amount=0, non_restricted_amount=0, transfer_flags=0x00, asset_number=b'\x00\x00\x00\x00\x00', registration_key=b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', transaction_ID_lenght=0x00, transaction_ID='', expiration=b'\x00\x00\x00\x00', pool_ID=0, reciept_data='', lock_timeout=0):
-
-##                #72
-##                
-##        sas.AFT_register_gaming_machine( )  
-##                #73
-##                
-##        sas.AFT_game_lock_and_status_request( )  
-##                #74
-  #      sas.AFT_register_gaming_machine(reg_code=0x01, asset_number=b'\xea\x03\x00\x00', reg_key='ghjhbvydjlfyvmkdyydr', POS_ID=b'\x03\x04\x05\x06')
-##                
-##        sas.set_AFT_reciept_data( )  
-##                #75
-##                
-##        sas.set_custom_AFT_ticket_data( )  
-##                #76
-##                
- #       sas.exnended_validation_status(control_mask=[0b00000011,0b00000000], status_bits=[0b00000011,0b00000000], cashable_ticket_reciept_exp=0, restricted_ticket_exp=0)
- 
-##                #7B
-##                
-##        sas.set_extended_ticket_data( )  
-##                #7C
-##                
-##        sas.set_ticket_data( )  
-##                #7D
-##                
-##        sas.current_date_time( )  
-##                #7E
-##                
-##        sas.recieve_date_time( )  
-##                #7F
-##                
-##        sas.recieve_progressive_amount( )  
-##                #80
-##                
-##        sas.cumulative_progressive_wins( )  
-##                #83
-##                
-##        sas.progressive_win_amount( )  
-##                #84
-##                
-##        sas.SAS_progressive_win_amount( )  
-##                #85
-##                
-##        sas.recieve_multiple_progressive_levels( )  
-##                #86
-##                
-##        sas.multiple_SAS_progresive_win_amounts( )  
-##                #87
-##                
-##        sas.initiate_legacy_bonus_pay( )  
-##                #8A
-##                
-##        sas.initiate_multiplied_jackpot_mode( )  
-##                #8B
-##                
-##        sas.enter_exit_tournament_mode( )  
-##                #8C
-##                
-##        sas.card_info( )  
-##                #8E
-##                
-##        sas.physical_reel_stop_info( )  
-##                #8F
-##                
-##        sas.legacy_bonus_win_info( )  
-##                #90
-##                
-##        sas.remote_handpay_reset( )  
-##                #94
-##                
-##        sas.tournament_games_played( )  
-##                #95
-##                
-##        sas.tournament_games_won( )  
-##                #96
-##                
-##        sas.tournament_credits_wagered( )  
-##                #97
-##                
-##        sas.tournament_credits_won( )  
-##                #98
-##                
-##        sas.meters_95_98( )  
-##                #99
-##                
-##        sas.legacy_bonus_meters( )  
-##                #9A
-##                
-##        sas.enabled_features( )  
-##                #A0
-##                
-##        sas.cashout_limit( )  
-##                #A4
-##                
-##        sas.enable_jackpot_handpay_reset_method( )  
-##                #A8
-##                
-##        sas.en_dis_game_auto_rebet( )  
-##                #AA
-##                
-##        sas.extended_meters_game_alt( ,n=1)  
-##                #AF
-##                
-##        sas.multi_denom_preamble( )  
-##                #B0
-##                
-##        sas.current_player_denomination( )  
-##                #B1
-##                
-##        sas.enabled_player_denominations( )  
-##                #B2
-##                
-##        sas.token_denomination( )  
-##                #B3
-##                
-##        sas.wager_category_info( )  
-##                #B4
-##                
-##        sas.extended_game_info( ,n=1)  
-##                #B5
-##                
-##        sas.event_response_to_long_poll( )  
-##                #FF
-
-
-
-
-##        
-##        for keys, values in aft_statement.items():
-##                print(keys)
-##                print(values)
- 
-        #sas.enhanced_validation_information(0)
-  
-        #sas.set_secure_enhanced_validation_ID( MachineID=[0x01,0x01,0x01], seq_num=[0x00,0x00,0x01])
-##        
-        while True:
-                state= binascii.hexlify(bytearray(sas.events_poll()))
-                print state
-                if (state=='57'):
-                        sas.pending_cashout_info()
-                        sas.validation_number( validationID=1, valid_number=1234567890365421)
-                        
-                        #sas.cash_out_ticket_info()
-                        
-                if (state=='67'): #cashin
-                        sas.ticket_validation_data()
-                        sas.redeem_ticket( transfer_code=0, transfer_amount=10000, parsing_code=0, validation_data=1234567891234567, rescticted_expiration=3, pool_ID=0)
-                        time.sleep(.3)
-                        sas.redeem_ticket( transfer_code=0xff, transfer_amount=10000, parsing_code=0, validation_data=1234567891234567, rescticted_expiration=3, pool_ID=0)
-
-                #71
-                
+import logging
+import datetime
+
+from utils import Crc
+from utils.Decorators import deprecated
+from multiprocessing import log_to_stderr
+
+from models import *
+from error_handler import *
+
+__author__ = "Zachary Tomlinson, Antonio D'Angelo"
+__credits__ = ["Thomas Pythonas", "Grigor Kolev"]
+__license__ = "MIT"
+__version__ = "2.0.0"
+__maintainer__ = "Zachary Tomlinson, Antonio D'Angelo"
+__status__ = "Staging"
+
+
+class Sas:
+    """Main SAS Library Class"""
+
+    def __init__(
+            self,
+            port,  # Serial Port full Address
+            timeout=2,  # Connection timeout
+            poll_address=0x82,  # Poll Address
+            denom=0.01,  # Denomination
+            asset_number="01000000",  # Asset Number
+            reg_key="0000000000000000000000000000000000000000",  # Reg Key
+            pos_id="B374A402",  # Pos ID
+            key="44",  # Key
+            debug_level="DEBUG",  # Debug Level
+            perpetual=False,  # When this is true the lib will try forever to connect to the serial
+            check_last_transaction = True
+    ):
+        # Let's address some internal var
+        self.poll_timeout = timeout
+        self.address = None
+        self.machine_n = None
+        self.check_last_transaction = check_last_transaction
+        self.denom = denom
+        self.asset_number = asset_number
+        self.reg_key = reg_key
+        self.pos_id = pos_id
+        self.transaction = None
+        self.my_key = key
+        self.poll_address= poll_address
+        self.perpetual = perpetual
+
+        # Init the Logging system
+        self.log = log_to_stderr()
+        self.log.setLevel(logging.getLevelName(debug_level))
+        self.last_gpoll_event = None
+
+        # Open the serial connection
+        while 1:
+            try:
+                self.connection = serial.Serial(
+                    port=port,
+                    baudrate=19200,
+                    timeout=timeout,
+                )
+                self.close()
+                self.timeout = timeout
+                self.log.info("Connection Successful")
+                break
+            except:
+                if not self.perpetual:
+                    self.log.critical("Error while connecting to the machine....Quitting...")
+                    exit(1)  # Make a graceful exit since it's expected behaviour
+
+                self.log.critical("Error while connecting to the machine....")
                 time.sleep(1)
 
-        for keys, values in tito_statement.items():
-                print(keys)
-                print(values)
+        return
+
+    def is_open(self):
+        return self.connection.is_open
         
+    def flush(self):
+        try:
+            if self.is_open() == False:
+                self.open()
+            self.connection.flush()
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+            
+    def flush_hard(self):
+        """Flush the serial buffer in input and output"""
+        try:
+            if not self.is_open():
+                self.open()
+            self.connection.reset_output_buffer()
+            self.connection.reset_input_buffer()
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+
+        #self.close()
+
+    def start(self):
+        """Warm Up the connection to the VLT"""
+
+        self.log.info("Connecting to the machine...")
+        while True:
+            if not self.is_open():
+                try:
+                    self.open()
+                    if not self.is_open():
+                        self.log.error("Port is NOT open")
+                except SASOpenError:
+                    self.log.critical("No SAS Port")
+                except Exception as e:
+                    self.log.critical(e, exc_info=True)
+            else:
+                self.connection.reset_output_buffer()
+                self.connection.reset_input_buffer()
+                response = self.connection.read(1)
+
+                if not response:
+                    self.log.error("No SAS Connection")
+                    time.sleep(1)
+
+                if response != b"":
+                    self.address = int(binascii.hexlify(response))
+                    self.machine_n = response.hex()
+                    self.log.info("Address Recognized " + str(self.address))
+                    break
+                else:
+                    self.log.error("No SAS Connection")
+                    time.sleep(1)
+
+        self.close()
+        return self.machine_n
+
+    def close(self):
+        """Close the connection to the serial port"""
+        self.connection.close()
+
+    def open(self):
+        """Open connection to the VLT"""
+        try:
+            if self.connection.is_open is not True:
+                self.connection.open()
+        except:
+            raise SASOpenError
+
+    def _conf_event_port(self):
+        """Do magick to make SAS Happy and work with their effing wakeup bit"""
+        self.open()
+        self.connection.flush()
+        self.connection.timeout = self.poll_timeout
+        self.connection.parity = serial.PARITY_NONE
+        self.connection.stopbits = serial.STOPBITS_TWO
+        self.connection.reset_input_buffer()
+
+    def _conf_port(self):
+        """As per _conf_event_port Do magick to make SAS Happy and work with their effing parity"""
+        self.open()
+        self.connection.flush()
+        self.connection.timeout = self.timeout
+        self.connection.parity = serial.PARITY_MARK
+        self.connection.stopbits = serial.STOPBITS_ONE
+        self.connection.reset_input_buffer()
+
+    def _send_command(
+            self, command, no_response=False, timeout=None, crc_need=True, size=1
+    ):
+        """Main function to physically send commands to the VLT"""
+        try:
+            buf_header = [self.address]
+            self._conf_port()
+
+            buf_header.extend(command)
+
+            if crc_need:
+                buf_header.extend(Crc.calculate(bytes(buf_header)))
+
+            self.connection.write([self.poll_address, self.address])
+
+            self.connection.flush()
+            self.connection.parity = serial.PARITY_SPACE
+
+            self.connection.write((buf_header[1:]))
+
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+
+        try:
+            response = self.connection.read(size)
+
+            if no_response:
+                try:
+                    return int(binascii.hexlify(response))
+                except ValueError as e:
+                    self.log.critical("no sas response %s" % (str(buf_header[1:])))
+                    return None
+
+            response = Crc.validate(response)
+
+            self.log.debug("sas response %s", binascii.hexlify(response))
+
+            return response
+
+        except BadCRC as e:
+            raise e
+
+        except Exception as e:
+            self.log.critical(e, exc_info=True)
+
+        return None
+
+    @deprecated("use utils.Crc validation fuction")
+    def _check_response(rsp):
+        """Function in charge of the CRC Check"""
+        if rsp == "":
+            raise NoSasConnection
+
+        mac_crc = [int.from_bytes(rsp[-2:-1]), int.from_bytes(rsp[-1:])]
+        my_crc = Crc.calculate(rsp[0:-2])
+
+        if mac_crc != my_crc:
+            raise BadCRC(binascii.hexlify(rsp))
+        else:
+            return rsp[1:-2]
+
+    def events_poll(self):
+        """Events Poll function
+
+        See Also
+        --------
+        WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
+        self._conf_event_port()
+
+        cmd = [0x80 + self.address]
+        self.connection.write([self.poll_address])
+
+        try:
+            self.connection.write(cmd)
+            event = self.connection.read(1)
+            if event == "":
+                raise NoSasConnection
+            event = GPoll.GPoll.get_status(event.hex())
+        except KeyError as e:
+            raise EMGGpollBadResponse
+        except Exception as e:
+            raise e
+        if self.last_gpoll_event != event:
+                self.last_gpoll_event = event
+            else:
+                event = 'No activity'
+        return event
+
+    def shutdown(self):
+        """Make the VLT unplayable
+        :note: This is a LONG POLL COMMAND
+        """
+        # [0x01]
+        if self._send_command([0x01], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def startup(self):
+        """Synchronize to the host polling cycle
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x02], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def sound_off(self):
+        """Disable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x03], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def sound_on(self):
+        """Enable VLT sounds
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x04], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def reel_spin_game_sounds_disabled(self):
+        """Reel spin or game play sounds disabled
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x05], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def enable_bill_acceptor(self):
+        """Enable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x06], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def disable_bill_acceptor(self):
+        """Disable the Bill Acceptor
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x07], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def configure_bill_denom(
+            self, bill_denom=[0xFF, 0xFF, 0xFF], action_flag=[0xFF]
+    ):
+        """Configure Bill Denominations
+
+        Parameters
+        ----------
+        bill_denom : dict
+            Bill denominations sent LSB first (0 = disable, 1 = enable)
+
+            =====  =====  ========  ========    =====
+            Bit    LSB    2nd Byte  3rd Byte    MSB
+            =====  =====  ========  ========    =====
+            0      $1     $200      $20000      TBD
+            1      $2     $250      $25000      TBD
+            2      $5     $500      $50000      TBD
+            3      $10    $1000     $100000     TBD
+            4      $20    $2000     $200000     TBD
+            5      $25    $2500     $250000     TBD
+            6      $50    $5000     $500000     TBD
+            7      $100   $10000    $1000000    TBD
+            =====  =====  ========  ========    =====
+
+        action_flag : dict
+            Action of bill acceptor after accepting a bill
+
+            =====  ===========
+            Bit    Description
+            =====  ===========
+            0      0 = Disable bill acceptor after each accepted bill
+
+                   1 = Keep bill acceptor enabled after each accepted bill
+            =====  ===========
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x08, 0x00]
+        cmd.extend(bill_denom)
+        cmd.extend(action_flag)
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def en_dis_game(self, game_number=None, en_dis=False):
+        """Enable or Disable a specific game
+
+        Parameters
+        ----------
+        game_number : bcd
+            0001-9999 Game number
+
+        en_dis : bool
+            Default is False. True enable a game | False disable it
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        """
+        if not game_number:
+            game_number = self.selected_game_number()
+
+        game = int(str(game_number), 16)
+
+        if en_dis:
+            en_dis = [0]
+        else:
+            en_dis = [1]
+
+        cmd = [0x09]
+
+        cmd.extend([((game >> 8) & 0xFF), (game & 0xFF)])
+        cmd.extend(bytearray(en_dis))
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def enter_maintenance_mode(self):
+        """Put the VLT in a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x0A], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def exit_maintenance_mode(self):
+        """Recover  the VLT from a state of maintenance mode
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+        """
+        if self._send_command([0x0B], True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def en_dis_rt_event_reporting(self, enable=False):
+        """For situations where real time event reporting is desired, the gaming machine can be configured to report events in response to long polls as well as general polls. This allows events such as reel stops, coins in, game end, etc., to be reported in a timely manner
+            Returns
+            -------
+            bool
+                True if successful, False otherwise.
+
+            See Also
+            --------
+            WiKi : https://github.com/zacharytomlinson/saspy/wiki/4.-Important-To-Know#event-reporting
+        """
+        if not enable:
+            enable = [0]
+        else:
+            enable = [1]
+
+        cmd = [0x0E]
+        cmd.extend(bytearray(enable))
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def send_meters_10_15(self, denom=True):
+        """Send meters 10 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x0F]
+        data = self._send_command(cmd, crc_need=False, size=28)
+        if data:
+            meters = {}
+            if denom:
+                Meters.Meters.STATUS_MAP["total_cancelled_credits_meter"] = round(
+                    int((binascii.hexlify(bytearray(data[1:5])))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_out_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_droup_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[17:21]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[21:25]))
+                )
+            else:
+                Meters.Meters.STATUS_MAP["total_cancelled_credits_meter"] = int(
+                    (binascii.hexlify(bytearray(data[1:5])))
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_out_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_droup_meter"] = int(
+                    binascii.hexlify(bytearray(data[13:17]))
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
+                    binascii.hexlify(bytearray(data[17:21]))
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[21:25]))
+                )
+
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def total_cancelled_credits(self, denom=True):
+        """Send total cancelled credits meter 
+
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND
+            """
+        cmd = [0x10]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_bet_meter(self, denom=True):
+        """Send total coin in meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
+        cmd = [0x11]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_win_meter(self, denom=True):
+        """Send total coin out meter
+            Parameters
+            ----------
+            denom : bool
+                If True will return the values of the meters in float format (i.e. 123.23)
+                otherwise as int (i.e. 12323)
+
+            Returns
+            -------
+            Mixed
+                Round | INT | None
+
+            Notes
+            -------
+            This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+            """
+        cmd = [0x12]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_drop_meter(self, denom=True):
+        """Send total drop meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
+        cmd = [0x13]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_jackpot_meter(self, denom=True):
+        """Send total jackpot meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
+        cmd = [0x14]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def games_played_meter(self):
+        """Send games played meter
+
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x15]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def games_won_meter(self, denom=True):
+        """Send games won meter
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Round | INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Pretty sure that the param should not be used @todo CHECK ME
+        """
+        cmd = [0x16]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def games_lost_meter(self):
+        """Send games won meter
+        Returns
+        -------
+        Mixed
+            INT | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x17]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def games_powerup_door_opened(self):
+        """Send meters 10 through 15
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x18]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            Meters.Meters.STATUS_MAP["games_last_power_up"] = int(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            Meters.Meters.STATUS_MAP["games_last_slot_door_close"] = int(
+                binascii.hexlify(bytearray(data[1:5]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def meters_11_15(self, denom=True):
+        """Send meters 11 through 15
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the values of the meters in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x19]
+        data = self._send_command(cmd, crc_need=False, size=24)
+        if data:
+            if not denom:
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = int(
+                    binascii.hexlify(bytearray(data[1:5]))
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
+                    binascii.hexlify(bytearray(data[13:17]))
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[17:21]))
+                )
+            else:
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_in_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[17:21]))
+                )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def current_credits(self, denom=True):
+        """Send current credits
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            round | int | None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x1A]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            if denom:
+                return round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+            else:
+                return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def handpay_info(self):
+        """Send handpay information
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND - Warning: is missing 2-byte BCD Partial pay amount @todo FIX ME !
+        """
+        cmd = [0x1B]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            Meters.Meters.STATUS_MAP["bin_progressive_group"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            Meters.Meters.STATUS_MAP["bin_level"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["amount"] = int(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["bin_reset_ID"] = int(
+                binascii.hexlify(bytearray(data[8:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def meters(self, denom=True):
+        """Send Meters
+
+        Parameters
+        ----------
+        denom : bool
+            If True will return the value in float format (i.e. 123.23)
+            otherwise as int (i.e. 12323)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters (in int or float) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x1C]
+        data = self._send_command(cmd, crc_need=False, size=36)
+        if data:
+            if not denom:
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = int(
+                    binascii.hexlify(bytearray(data[1:5]))
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = int(
+                    binascii.hexlify(bytearray(data[5:9]))
+                )
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = int(
+                    binascii.hexlify(bytearray(data[9:13]))
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = int(
+                    binascii.hexlify(bytearray(data[13:17]))
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[17:21]))
+                )
+                Meters.Meters.STATUS_MAP["games_won_meter"] = int(
+                    binascii.hexlify(bytearray(data[21:25]))
+                )
+                Meters.Meters.STATUS_MAP["slot_door_opened_meter"] = int(
+                    binascii.hexlify(bytearray(data[25:29]))
+                )
+                Meters.Meters.STATUS_MAP["power_reset_meter"] = int(
+                    binascii.hexlify(bytearray(data[29:33]))
+                )
+            else:
+                Meters.Meters.STATUS_MAP["total_bet_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[1:5]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_win_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[5:9]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_drop_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[9:13]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["total_jackpot_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[13:17]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[17:21]))
+                )
+                Meters.Meters.STATUS_MAP["games_won_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[21:25]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["slot_door_opened_meter"] = int(
+                    binascii.hexlify(bytearray(data[25:29]))
+                )
+                Meters.Meters.STATUS_MAP["power_reset_meter"] = int(
+                    binascii.hexlify(bytearray(data[29:33]))
+                )
+
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def total_bill_meters(self):
+        """Send total bill meters (# of bills)
+
+        Returns
+        -------
+        Mixed
+            Object containing the translated meters or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x1E]
+        data = self._send_command(cmd, crc_need=False, size=28)
+        if data:
+            Meters.Meters.STATUS_MAP["s1_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[1:5]))
+            )
+            Meters.Meters.STATUS_MAP["s5_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[5:9]))
+            )
+            Meters.Meters.STATUS_MAP["s10_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[9:13]))
+            )
+            Meters.Meters.STATUS_MAP["s20_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[13:17]))
+            )
+            Meters.Meters.STATUS_MAP["s50_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[17:21]))
+            )
+            Meters.Meters.STATUS_MAP["s100_bills_accepted_meter"] = int(
+                binascii.hexlify(bytearray(data[21:25]))
+            )
+
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def gaming_machine_id(self):
+        """Gaming machine information command
+        @todo Check this one...something smell bad
+
+        According to doc:
+            =====================  ======  =================  ========================================================================================================================================
+            Field                  Bytes   Value              Description
+            =====================  ======  =================  ========================================================================================================================================
+            Address                1       binary 01-7F       Address of gaming machine responding
+            Command                1       binary 1F          Gaming machine information command
+            Game ID                2       ASCII ??           Game ID in ASCII. (see Table C-1 in Appendix C)
+            Additional ID          3       ASCII ???          Additional game ID in ASCII. If the gaming machine does not support an additional ID, this field should be padded with ASCII "0"s.
+            Denomination           1       binary 00-FF       Binary number representing the SAS accounting denomination of this gaming machine
+            Max bet                1       binary 01-FF       Largest configured max bet for the gaming machine, or FF if largest configured max bet greater than or equal to 255
+            Progressive Group      1       binary 00-FF       Current configured progressive group for the gaming machine
+            Game options           2       binary 0000-FFFF   Game options selected by the operator. The bit configurations are dependent upon the type of gaming machine.
+            Paytable ID            6       ASCII ??????       Paytable ID in ASCII
+            Base %                 4       ASCII ??.??        Theoretical base pay back percentage for maximum bet in ASCII. The decimal is implied and NOT transmitted.
+            CRC                    2       binary 0000-FFFF   16-bit CRC
+            =====================  ======  =================  ========================================================================================================================================
+
+        """
+        # 1F
+        cmd = [0x1F]
+        data = self._send_command(cmd, crc_need=False, size=24)
+        if data is not None:
+            denom = Denomination.Denomination.get_status(data[6:7].hex())
+            self.log.info("Recognized " + str(denom))
+            self.denom = denom
+            return denom
+            # meters['ASCII_game_ID']=(((data[1:3])))
+            # meters['ASCII_additional_ID']=(((data[3:6])))
+            # meters['bin_denomination']=int(self.hexlify(self.bytearray(data[4:5])))
+            # meters['bin_max_bet']=(self.hexlify(self.bytearray(data[7:8])))
+            # meters['bin_progressive_mode']=int(self.hexlify(self.bytearray(data[8:9])))
+            # meters['bin_game_options']=(self.hexlify(self.bytearray(data[9:11])))
+            # meters['ASCII_paytable_ID']=(((data[11:17])))
+            # meters['ASCII_base_percentage']=(((data[17:21])))
+
+            # return data
+        return None
+
+    def total_dollar_value_of_bills_meter(self):
+        """Send total dollar value of bills meter
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x20]
+        data = self._send_command(cmd, crc_need=False, size=8)
+
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:])))
+
+        return None
+
+    def rom_signature_verification(self):
+        """ROM Signature Verification
+
+        Returns
+        -------
+        Mixed
+            int | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x21, 0x00, 0x00]
+        data = self._send_command(cmd, crc_need=True)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:3])))
+
+        return None
+
+    def true_coin_in(self):
+        """Send true coin in
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x2A]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def true_coin_out(self):
+        """Send true coin out
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x2B]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def curr_hopper_level(self):
+        """Send current hopper level
+
+        Returns
+        -------
+        Mixed
+            int (meter in # of coins/tokens) | none
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x2C]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_hand_paid_cancelled_credit(self):
+        """Send total hand paid cancelled credits
+
+        Notes
+        -------
+        WARNING ! @todo i return: 2-byte BCD game number and 4-byte BCD meter in SAS accounting denom units. Therefore this code is WRONG
+
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x2D]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def delay_game(self, delay_time=100):
+        """Delay Game
+        Parameters
+        ----------
+        delay_time : int
+            How long in ms to delay a game
+            
+        Returns
+        -------
+        bool
+            True for a successful operation, False otherwise
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        delay_time = str(delay_time)
+        delay_fmt = "" + ("0" * (4 - len(delay_time)) + delay_time)
+        cmd = [0x2E]
+        count = 0
+        for i in range(len(delay_fmt) // 2):
+            cmd.append(int(delay_fmt[count: count + 2], 16))
+            count += 2
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def selected_meters_for_game():
+        # 2F
+        # TODO: selected_meters_for_game
+        # As per above...NOT ME ! @well-it-wasnt-me
+        return None
+
+    def send_1_bills_in_meters(self):
+        """Send 1$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x31]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_2_bills_in_meters(self):
+        """Send 2$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x32]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_5_bills_in_meters(self):
+        """Send 5$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x33]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_10_bills_in_meters(self):
+        """Send 10$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x34]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_20_bills_in_meters(self):
+        """Send 20$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x35]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_50_bills_in_meters(self):
+        """Send 50$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x36]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_100_bills_in_meters(self):
+        """Send 100$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x37]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_500_bills_in_meters(self):
+        """Send 500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x38]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_1000_bills_in_meters(self):
+        """Send 1.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x39]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_200_bills_in_meters(self):
+        """Send 200$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3A]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_25_bills_in_meters(self):
+        """Send 25$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3B]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_2000_bills_in_meters(self):
+        """Send 2.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3C]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+        return None
+
+    def cash_out_ticket_info(self):
+        """Send cash out ticket information
+
+        Returns
+        -------
+        mixed
+            dict or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3D]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            return {
+                "cashout_ticket_number": int(binascii.hexlify(bytearray(data[1:3]))),
+                "cashout_amount_in_cents": int(binascii.hexlify(bytearray(data[3:]))),
+            }
+
+        return None
+
+    def send_2500_bills_in_meters(self):
+        """Send 2.500$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3E]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_5000_bills_in_meters(self):
+        """Send 5.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x3F]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_10000_bills_in_meters(self):
+        """Send 10.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x40]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_20000_bills_in_meters(self):
+        """Send 20.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x41]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_25000_bills_in_meters(self):
+        """Send 25.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x42]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_50000_bills_in_meters(self):
+        """Send 50.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x43]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_100000_bills_in_meters(self):
+        """Send 100.000$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x44]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def send_250_bills_in_meters(self):
+        """Send 250$ bills in meters
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x45]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def credit_amount_of_all_bills_accepted(self):
+        """Send credit amount of all bills accepted
+
+        Returns
+        -------
+        mixed
+            meter in SAS accounting denom units or None
+
+        """
+        cmd = [0x46]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def coin_amount_accepted_from_external_coin_acceptor(self):
+        """Send coin amount accepted from an external coin acceptor
+
+        Returns
+        -------
+        mixed
+             meter in SAS accounting denom units or None
+
+        """
+        cmd = [0x47]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def last_accepted_bill_info(self):
+        """ Send last accepted bill information
+        Returns
+        -------
+        mixed
+            dict or None
+        """
+        cmd = [0x48]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            Meters.Meters.STATUS_MAP["country_code"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            Meters.Meters.STATUS_MAP["bill_denomination"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["meter_for_accepted_bills"] = int(
+                binascii.hexlify(bytearray(data[3:6]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def number_of_bills_currently_in_stacker(self):
+        """ Send number of bills currently in the stacker
+        Returns
+        -------
+        mixed
+            int ( meter in # of bills )  or None
+        """
+        cmd = [0x49]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def total_credit_amount_of_all_bills_in_stacker(self):
+        """Send total credit amount of all bills currently in the stacker
+
+        Returns
+        -------
+        mixed
+            int (# of bills) or None
+
+        Notes
+        -------
+        This is a LONG POLL COMMAND
+        """
+        cmd = [0x4A]
+        data = self._send_command(cmd, crc_need=False, size=8)
+        if data:
+            return int(binascii.hexlify(bytearray(data[1:5])))
+
+        return None
+
+    def set_secure_enhanced_validation_id(
+            self, machine_id=[0x01, 0x01, 0x01], seq_num=[0x00, 0x00, 0x01]
+    ):
+        """
+        For a gaming machine to perform secure enhanced ticket/receipt/handpay validation, the host must use
+        the type S long poll. The host may also use this long poll to retrieve the current gaming
+        machine validation ID and validation sequence number by issuing the 4C command with a gaming
+        machine validation ID of zero. If a gaming machine is not configured to perform secure enhanced
+        validation, or is responding to a host that is not the validation controller, it ignores this long poll
+
+        :param machine_id: 3 binary - Gaming machine validation ID number
+        :param seq_num: 3 binary - Starting sequence number (incremented before being assigned to each event)
+        :return:
+        """
+        # 4C
+        # FIXME: set_secure_enhanced_validation_ID @todo... im beat...@well-it-wasnt-me
+        cmd = [0x4C, machine_id, seq_num]
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            TitoStatement.Tito.STATUS_MAP["machine_ID"] = int(
+                binascii.hexlify(bytearray(data[1:4]))
+            )
+            TitoStatement.Tito.STATUS_MAP["sequence_number"] = int(
+                binascii.hexlify(bytearray(data[4:8]))
+            )
+            return data
+
+        return None
+
+    def enhanced_validation_information(self, curr_validation_info=0):
+        """Send Enhanced Validation Information Command
+
+        Parameters
+        ----------
+        curr_validation_info :
+            Function code; 00 = read current validation info | 01-1F = validation info from buffer index n | FF = look ahead at current validation info
+
+        Returns
+        -------
+        mixed :
+            dict | none
+        """
+        # FIXME: enhanced_validation_information
+        cmd = [0x4D, curr_validation_info]
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            TitoStatement.Tito.STATUS_MAP["validation_type"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            TitoStatement.Tito.STATUS_MAP["index_number"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            TitoStatement.Tito.STATUS_MAP["date_validation_operation"] = str(
+                binascii.hexlify(bytearray(data[3:7]))
+            )
+            TitoStatement.Tito.STATUS_MAP["time_validation_operation"] = str(
+                binascii.hexlify(bytearray(data[7:10]))
+            )
+            TitoStatement.Tito.STATUS_MAP["validation_number"] = str(
+                binascii.hexlify(bytearray(data[10:18]))
+            )
+            TitoStatement.Tito.STATUS_MAP["amount"] = int(
+                binascii.hexlify(bytearray(data[18:23]))
+            )
+            TitoStatement.Tito.STATUS_MAP["ticket_number"] = int(
+                binascii.hexlify(bytearray(data[23:25]))
+            )
+            TitoStatement.Tito.STATUS_MAP["validation_system_ID"] = int(
+                binascii.hexlify(bytearray(data[25:26]))
+            )
+            TitoStatement.Tito.STATUS_MAP["expiration_date_printed_on_ticket"] = str(
+                binascii.hexlify(bytearray(data[26:30]))
+            )
+            TitoStatement.Tito.STATUS_MAP["pool_id"] = int(
+                binascii.hexlify(bytearray(data[30:32]))
+            )
+
+            return TitoStatement.Tito.get_non_empty_status_map()
+
+        return None
+
+    def current_hopper_status(self):
+        """Send Current Hopper Status
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        ------
+        Understanding the values:
+
+        - current_hopper_length
+        ==============      =====
+        Code (Binary)       Description
+        ==============      =====
+        02                   Only status and % full
+        06                   Status, % full and level
+        ==============      =====
+
+        - current_hopper_status
+        ==============      =====
+        Code (Binary)       Status
+        ==============      =====
+        00                   Hopper OK
+        01                   Flooded Optics
+        02                   Reverse Coin
+        03                   Coin too short
+        04                   Coin Jam
+        05                   Hopper runaway
+        06                   Optics Disconnected
+        07                   Hopper Empty
+        08-FE                Reserved
+        FF                   Other
+        ==============      =====
+
+        - current_hopper_percent_full :
+            Current hopper level as 0-100%, or FF if unable to detect hopper level percentage
+
+        - current_hopper_level :
+            4 BCD | Current hopper level in number of coins/tokens, only if EGM able to detect
+        """
+        # FIXME: current_hopper_status
+        cmd = [0x4F]
+        data = self._send_command(cmd, True, crc_need=False)
+        if data:
+            Meters.Meters.STATUS_MAP["current_hopper_length"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            Meters.Meters.STATUS_MAP["current_hopper_status"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["current_hopper_percent_full"] = int(
+                binascii.hexlify(bytearray(data[3:4]))
+            )
+            Meters.Meters.STATUS_MAP["current_hopper_level"] = int(
+                binascii.hexlify(bytearray(data[4:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def validation_meters(self, type_of_validation=0x00):
+        """Send validation meters
+        Parameters
+        ----------
+        type_of_validation : int
+            Type of validation
+
+            ==============      =====
+            Code (Binary)       Validation type
+            ==============      =====
+            00                   Cashable ticket from cashout or win, no handpay lockup
+            01                   Restricted promotional ticket from cashout
+            02                   Cashable ticket from AFT transfer
+            03                   Restricted ticket from AFT transfer
+            04                   Debit ticket from AFT transfer
+            10                   Cancelled credit handpay (receipt printed
+            20                   Jackpot handpay (receipt printed)
+            40                   Cancelled credit handpay (no receipt)
+            60                   Jackpot handpay (no receipt)
+            80                   Cashable ticket redeemed
+            81                   Restricted promotional ticket redeemed
+            82                   Nonrestricted promotional ticket redeemed
+            ==============      =====
 
 
+        Returns
+        -------
+        mixed :
+            dict | none
+
+        Notes
+        -------
+        Understanding the response:
+            - bin_validation_type :
+                See the table "Type of validation"
+            - total_validations : 4 BCD
+                Total number of validations of type
+            - cumulative_amount : 5 BCD
+                Cumulative validation amount in units of cents
+        """
+        # FIXME: validation_meters
+        cmd = [0x50, type_of_validation]
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            Meters.Meters.STATUS_MAP["bin_validation_type"] = int(
+                binascii.hexlify(bytearray(data[1]))
+            )
+            Meters.Meters.STATUS_MAP["total_validations"] = int(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            Meters.Meters.STATUS_MAP["cumulative_amount"] = str(
+                binascii.hexlify(bytearray(data[6:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def total_number_of_games_implemented(self):
+        # 51
+        cmd = [0x51]
+        # FIXME: cmd.extend(type_of_validation)
+        data = self._send_command(cmd, crc_need=False, size=6)
+        if data:
+            return str(binascii.hexlify(bytearray(data[1:])))
+
+        return None
+
+    def game_meters(self, n=None, denom=True):
+        # 52
+        cmd = [0x52]
+
+        if not n:
+            n = self.selected_game_number(in_hex=False)
+        cmd.extend([((n >> 8) & 0xFF), (n & 0xFF)])
+
+        data = self._send_command(cmd, crc_need=True, size=22)
+        if data:
+            meters = {}
+            if not denom:
+                Meters.Meters.STATUS_MAP["game_n_number"] = str(
+                    binascii.hexlify(bytearray(data[1:3]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_in_meter"] = int(
+                    binascii.hexlify(bytearray(data[3:7]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_out_meter"] = int(
+                    binascii.hexlify(bytearray(data[7:11]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_jackpot_meter"] = int(
+                    binascii.hexlify(bytearray(data[11:15]))
+                )
+                Meters.Meters.STATUS_MAP["geme_n_games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[15:]))
+                )
+            else:
+                Meters.Meters.STATUS_MAP["game_n_number"] = str(
+                    binascii.hexlify(bytearray(data[1:3]))
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_in_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[3:7]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["game_n_coin_out_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[7:11]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["game_n_jackpot_meter"] = round(
+                    int(binascii.hexlify(bytearray(data[11:15]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["geme_n_games_played_meter"] = int(
+                    binascii.hexlify(bytearray(data[15:]))
+                )
+
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def game_configuration(self, n=None):
+        # 53
+        cmd = [0x53]
+        # FIXME: game_configuration
+
+        if not n:
+            n = self.selected_game_number(in_hex=False)
+        cmd.extend([(n & 0xFF), ((n >> 8) & 0xFF)])
+
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            Meters.Meters.STATUS_MAP["game_n_number_config"] = int(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_game_ID"] = str(
+                binascii.hexlify(bytearray(data[3:5]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_additional_id"] = str(
+                binascii.hexlify(bytearray(data[5:7]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_bin_denomination"] = str(
+                binascii.hexlify(bytearray(data[7]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_bin_progressive_group"] = str(
+                binascii.hexlify(bytearray(data[8]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_bin_game_options"] = str(
+                binascii.hexlify(bytearray(data[9:11]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_paytable_ID"] = str(
+                binascii.hexlify(bytearray(data[11:17]))
+            )
+            Meters.Meters.STATUS_MAP["game_n_ASCII_base_percentage"] = str(
+                binascii.hexlify(bytearray(data[17:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def sas_version_gaming_machine_serial_id(self):
+        # 54
+        """
+        This function should be checked at begin in order to address
+        the changes from sas v6.02 and 6.03
+        - Antonio
+        @todo...one day i'll see to this....
+        """
+        cmd = [0x54, 0x00]
+        data = self._send_command(cmd, crc_need=False, size=20)
+        if data:
+            Meters.Meters.STATUS_MAP["ASCII_SAS_version"] = (
+                    int(binascii.hexlify(bytearray(data[2:5]))) * 0.01
+            )
+            Meters.Meters.STATUS_MAP["ASCII_serial_number"] = str(bytearray(data[5:]))
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def selected_game_number(self, in_hex=True):
+        # 55
+        cmd = [0x55]
+        data = self._send_command(cmd, crc_need=False, size=6)
+        if data:
+            if not in_hex:
+                return int(binascii.hexlify(bytearray(data[1:])))
+            else:
+                return binascii.hexlify(bytearray(data[1:]))
+
+        return None
+
+    def enabled_game_numbers(self):
+        # 56
+        cmd = [0x56]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            Meters.Meters.STATUS_MAP["number_of_enabled_games"] = int(
+                binascii.hexlify(bytearray(data[2]))
+            )
+            Meters.Meters.STATUS_MAP["enabled_games_numbers"] = int(
+                binascii.hexlify(bytearray(data[3:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def pending_cashout_info(self):
+        # 57
+        cmd = [0x57]
+        data = self._send_command(cmd, crc_need=False)
+        if data:
+            TitoStatement.Tito.STATUS_MAP["cashout_type"] = int(
+                binascii.hexlify(bytearray(data[1:2]))
+            )
+            TitoStatement.Tito.STATUS_MAP["cashout_amount"] = str(
+                binascii.hexlify(bytearray(data[2:]))
+            )
+            return TitoStatement.Tito.get_non_empty_status_map()
+
+        return None
+
+    def rcv_validation_number(self, validation_id=1, valid_number=0):
+        """Receive Validation number
+        Parameters
+        ----------
+        validation_id : int
+            Validation System ID Code (00 = system validation denied)
+
+        valid_number : int
+            validation number to use for cashout (not used if validation denied)
+
+        Returns
+        -------
+        Mixed
+            str | none - 00 = command ack | 80 = Not in cashout | 81 = Improper validation rejected
+        """
+        cmd = [0x58, self._bcd_coder_array(validation_id, 1), self._bcd_coder_array(valid_number, 8)]
+        data = self._send_command(cmd, crc_need=True)
+        if data:
+            return str(binascii.hexlify(bytearray(data[1])))
+
+        return None
+
+    def authentication_info(
+            self,
+            action=0,
+            addressing_mode=0,
+            component_name="",
+            auth_method=b"\x00\x00\x00\x00",
+            seed="",
+            seed_length=0,
+            offset="",
+            offset_length=0,
+    ):
+        """Authentication Info
+
+        Parameters
+        ----------
+        action : 1 binary
+            Requested authentication action:
+
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Interrogate number of installed components
+            01      Read status of component (address required)
+            02      Authenticate component (address required)
+            03      Interrogate authentication status
+            =====  =====
+
+        addressing_mode : 1 binary
+            =====  =====
+            Value  Description
+            =====  =====
+            00      Addressing by component index number
+            01      Addressing by component name
+            =====  =====
+
+        component_name : x bytes
+            ASCII component name if addressing mode = 01
+
+        auth_method : 4 binary
+            ==============      ============    ======================  =======================
+            Code (Binary)       Method          Seed size (max bytes)   Result Size (max bytes)
+            ==============      ============    ======================  =======================
+            00000000            None            n/a                     n/a
+            00000001            CRC16           2 binary                2 binary
+            00000002            CRC32           4 binary                4 binary
+            00000004            MD5             16 bytes                16 bytes
+            00000008            Kobetron I      4 ASCII                 4 ASCII
+            00000010            Kobetron II     4 ASCII                 4 ASCII
+            00000020            SHA1            20 Bytes                20 Bytes
+            ==============      ============    ======================  =======================
+
+        Returns
+        -------
+        bytearray
+            Response ACK/NACK
+
+        Notes
+        -------
+        Actually the real response is way more long and complex. Planning to map and implement it in the future
+
+        """
+        # 6E
+        # FIXME: authentication_info
+        cmd = [0x6E, 0x00, action]
+        if action == 0:
+            cmd[1] = 1
+        else:
+            if action == 1 or action == 3:
+                cmd.append(addressing_mode)
+                cmd.append(len(bytearray(component_name)))
+                cmd.append(bytearray(component_name))
+                cmd[1] = len(bytearray(component_name)) + 3
+            else:
+                if action == 2:
+                    cmd.append(addressing_mode)
+                    cmd.append(len(bytearray(component_name)))
+                    cmd.append(bytearray(component_name))
+                    cmd.append(auth_method)
+                    cmd.append(seed_length)
+                    cmd.append(bytearray(seed))
+                    cmd.append(offset_length)
+                    cmd.append(bytearray(offset))
+
+                    cmd[1] = (
+                            len(bytearray(offset))
+                            + len(bytearray(seed))
+                            + len(bytearray(component_name))
+                            + 6
+                    )
+
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            return data[1]
+
+        return None
+
+    @staticmethod
+    def extended_meters_for_game():
+        # TODO: extended_meters_for_game
+        # 6F
+        return None
+
+    def ticket_validation_data(self):
+        # 70
+        # FIXME: ticket_validation_data
+        # @todo This is wrong for sure....this should reply 9 BCD BCD-encoded 18 digit decimal validation number. The first two digits are a 2
+        # digit system ID code indicating how to interpret the following 16 digits.
+        # System ID code 00 indicates that the following 16 digits represent a SAS
+        # secure enhanced validation number. Other system ID codes and parsing codes
+        # will be assigned by IGT as needed
+        cmd = [0x70]
+        data = self._send_command(cmd, True, crc_need=False)
+        if data:
+            Meters.Meters.STATUS_MAP["ticket_status"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["ticket_amount"] = str(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["parsing_code"] = int(
+                binascii.hexlify(bytearray(data[8:9]))
+            )
+            Meters.Meters.STATUS_MAP["validation_data"] = str(
+                binascii.hexlify(bytearray(data[9:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def redeem_ticket(
+            self,
+            transfer_code=0,
+            transfer_amount=0,
+            parsing_code=0,
+            validation_data=0,
+            restricted_expiration=0,
+            pool_id=0
+    ):
+        # 71
+        # FIXME: redeem_ticket
+        cmd = [
+            0x71,
+            0x21,
+            transfer_code,
+            self._bcd_coder_array(transfer_amount, 5),
+            parsing_code,
+            self._bcd_coder_array(validation_data, 8),
+            self._bcd_coder_array(restricted_expiration, 4),
+            self._bcd_coder_array(pool_id, 2),
+        ]
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            Meters.Meters.STATUS_MAP["machine_status"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            Meters.Meters.STATUS_MAP["transfer_amount"] = int(
+                binascii.hexlify(bytearray(data[3:8]))
+            )
+            Meters.Meters.STATUS_MAP["parsing_code"] = int(
+                binascii.hexlify(bytearray(data[8:9]))
+            )
+            Meters.Meters.STATUS_MAP["validation_data"] = str(
+                binascii.hexlify(bytearray(data[9:]))
+            )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def aft_jp(self, money, amount=1, lock_timeout=0, games=None):
+        # FIXME: make logically coherent
+        # self.lock_emg(lock_time=500, condition=1)
+        money_1 = money_2 = money_3 = "0000000000"
+        if self.denom > 0.01:
+            return None
+
+        if not games:
+            for i in range(3):
+                games = self.selected_game_number(in_hex=False)
+                if not games:
+                    time.sleep(0.04)
+                else:
+                    break
+
+        if not games or games == 0 or games < 1:
+            return "NoGame"
+
+        if not money:
+            money = str(self.current_credits(denom=False))
+        else:
+            money = str(int((money / self.denom)))
+            money = money.replace(".", "")
+
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[
+                             2:
+                             ]  # the division result should be converted to an integer before using hex, added extra / to solve this
+        if len(len_transaction_id) < 2:
+            len_transaction_id = "0" + len_transaction_id
+        elif len(len_transaction_id) % 2 == 1:
+            len_transaction_id = "0" + len_transaction_id
+
+        cmd = """72{my_key}{index}00{transfer_code}{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
+            transfer_code="11",
+            index="00",
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
+            key=self.reg_key,
+            len_transaction=len_transaction_id,
+            transaction=last_transaction,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
+            my_key=self.my_key,
+        )
+
+        new_cmd = []
+        count = 0
+        for i in range(
+                len(cmd) // 2
+        ):  # Python3...not my fault...might be better using range(0, len(cmd), 2) ?
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        response = None
+        self.aft_register()
+        if lock_timeout > 0:
+            self.aft_game_lock(lock_timeout, condition=1)
+
+        data = self._send_command(new_cmd, crc_need=True, size=82)
+
+        if data:
+            a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+            response = {
+                "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                "Transaction buffer position": int(
+                    binascii.hexlify(bytearray(data[2:3]))
+                ),
+                "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                    binascii.hexlify(bytearray(data[3:4]))
+                ),
+                "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
+                    binascii.hexlify(bytearray(data[4:5]))
+                ),
+                "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
+                    binascii.hexlify(bytearray(data[5:6]))
+                ),
+                "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                   * self.denom,
+                "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                     * self.denom,
+                "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
+                                        * self.denom,
+                "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                "Transaction ID": binascii.hexlify(
+                    bytearray(data[27: (27 + a)])
+                ),  # WARNING: technically should be (27 + 2 * a) due to an off error.... @todo...somebody see me !
+            }
+        try:
+            self.aft_unregister()
+        except:
+            self.log.warning("AFT UNREGISTER ERROR: won to host")
+
+        return response
+
+    def aft_out(self, money=None, amount=1, lock_timeout=0):
+        """
+        aft_out is a function to make a machine cashout (effectively removes the credit in the machine)
+        :param money:
+        :param amount:
+        :param lock_timeout:
+        :param kwargs:
+        :return:
+        """
+        # self.lock_emg(lock_time=500, condition=1)
+        money_1 = money_2 = money_3 = "0000000000"
+        if self.denom > 0.01:
+            return None
+
+        if not money:
+            money = str(self.current_credits(denom=False))
+        else:
+            money = str(int((money / self.denom))).replace(".", "")
+
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
+        if len(len_transaction_id) < 2:
+            len_transaction_id = "0" + len_transaction_id
+        elif len(len_transaction_id) % 2 == 1:
+            len_transaction_id = "0" + len_transaction_id
+
+        cmd = """72{my_key}{index}00{transfer_code}{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
+            transfer_code="80",
+            index="00",
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
+            key=self.reg_key,
+            len_transaction=len_transaction_id,
+            transaction=last_transaction,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
+            my_key=self.my_key,
+        )
+
+        new_cmd = []
+        count = 0
+        for i in range(len(cmd) // 2):
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        response = None
+        self.aft_register()
+        if lock_timeout > 0:
+            self.aft_game_lock(lock_timeout, condition=1)
+        try:
+            data = self._send_command(new_cmd, crc_need=True, size=82)
+            if data:
+                a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+                response = {
+                    "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                    "Transaction buffer position": int(
+                        binascii.hexlify(bytearray(data[2:3]))
+                    ),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[3:4]))
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[4:5]))
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[5:6]))
+                    ),
+                    "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                       * self.denom,
+                    "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                         * self.denom,
+                    "Nonrestricted amount": int(
+                        binascii.hexlify(bytearray(data[16:21]))
+                    )
+                                            * self.denom,
+                    "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                    "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                    "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+                }
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+
+        self.aft_unregister()
+
+        return response
+
+    def aft_cashout_enable(self, amount=1, money="0000000000"):
+        money_1 = money_2 = money_3 = "0000000000"
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
+        if len(len_transaction_id) < 2:
+            len_transaction_id = "0" + len_transaction_id
+        elif len(len_transaction_id) % 2 == 1:
+            len_transaction_id = "0" + len_transaction_id
+
+        cmd = """72{my_key}00{index}{transfer_code}{money_1}{money_2}{money_3}
+                 02{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
+            transfer_code="80",
+            index="00",
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
+            key=self.reg_key,
+            len_transaction=len_transaction_id,
+            transaction=last_transaction,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
+            my_key=self.my_key,
+        )
+
+        new_cmd = []
+        count = 0
+        for i in range(len(cmd) // 2):
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        self.aft_register()
+
+        response = None
+        try:
+            data = self._send_command(new_cmd, crc_need=True, size=82)
+            if data:
+                a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+                response = {
+                    "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                    "Transaction buffer position": int(
+                        binascii.hexlify(bytearray(data[2:3]))
+                    ),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[3:4]))
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[4:5]))
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[5:6]))
+                    ),
+                    "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                       * self.denom,
+                    "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                         * self.denom,
+                    "Nonrestricted amount": int(
+                        binascii.hexlify(bytearray(data[16:21]))
+                    )
+                                            * self.denom,
+                    "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                    "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                    "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+                }
+        except Exception as e:
+            self.log.critical(e, exc_info=True)
+
+        self.aft_unregister()
+        try:
+            self.aft_clean_transaction_poll()
+        except:
+            self.log.critical("Triggered unknown exception in aft_cashout_enable")
+            return False
+
+        return True
+
+    def aft_won(
+            self, money="0000000000", amount=1, games=None, lock_timeout=0
+    ):
+        money_1 = money_2 = money_3 = "0000000000"
+        if self.denom > 0.01:
+            return None
+
+        if not games:
+            for i in range(3):
+                try:
+                    games = self.selected_game_number(in_hex=False)
+                except:
+                    time.sleep(0.04)
+                else:
+                    break
+
+        if not games or games < 1:
+            return "NoGame"
+
+        money = str(int(money / self.denom)).replace(".", "")
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
+        if len(len_transaction_id) < 2:
+            len_transaction_id = "0" + len_transaction_id
+        elif len(len_transaction_id) % 2 == 1:
+            len_transaction_id = "0" + len_transaction_id
+
+        cmd = """72{my_key}{transfer_code}{index}{money_1}{money_2}{money_3}"
+               "00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
+            transfer_code="0000",
+            index="10",
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
+            key=self.reg_key,
+            len_transaction=len_transaction_id,
+            transaction=last_transaction,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
+            my_key=self.my_key,
+        )
+
+        new_cmd = []
+        count = 0
+        for i in range(len(cmd) // 2):
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        response = None
+        self.aft_register()
+        if lock_timeout > 0:
+            self.aft_game_lock(lock_timeout, condition=3)
+        try:
+            data = self._send_command(new_cmd, crc_need=True, size=82)
+            if data:
+                a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+                response = {
+                    "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                    "Transaction buffer position": int(
+                        binascii.hexlify(bytearray(data[2:3]))
+                    ),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[3:4]))
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[4:5]))
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[5:6]))
+                    ),
+                    "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                       * self.denom,
+                    "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                         * self.denom,
+                    "Nonrestricted amount": int(
+                        binascii.hexlify(bytearray(data[16:21]))
+                    )
+                                            * self.denom,
+                    "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                    "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                    "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+                }
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+
+        self.aft_unregister()
+
+        return response
+
+    def aft_in(self, money, amount=1):
+        """
+        aft_in is the function you want to use to charge money into your machine
+
+        :param money:
+        :param amount:
+        :param lock_timeout:
+        :param kwargs:
+        :return:
+        """
+        money_1 = money_2 = money_3 = "0000000000"
+        if self.denom > 0.01:
+            return None
+
+        money = str(int(money / self.denom)).replace(".", "")
+        money = "0" * (10 - len(money)) + money
+
+        match amount:
+            case 1:
+                money_1 = money
+            case 2:
+                money_2 = money
+            case 3:
+                money_3 = money
+            case _:
+                raise AFTBadAmount
+
+        last_transaction = self.aft_format_transaction()
+        len_transaction_id = hex(len(last_transaction) // 2)[2:]
+        if len(len_transaction_id) < 2:
+            len_transaction_id = "0" + len_transaction_id
+        elif len(len_transaction_id) % 2 == 1:
+            len_transaction_id = "0" + len_transaction_id
+
+        cmd = """72{my_key}{transfer_code}{index}00{money_1}{money_2}{money_3}
+                 00{asset}{key}{len_transaction}{transaction}{times}0C0000""".format(
+            transfer_code="00",
+            index="00",
+            money_1=money_1,
+            money_2=money_2,
+            money_3=money_3,
+            asset=self.asset_number,
+            key=self.reg_key,
+            len_transaction=len_transaction_id,
+            transaction=last_transaction,
+            times=datetime.datetime.strftime(datetime.datetime.now(), "%m%d%Y"),
+            my_key=self.my_key,
+        )
+
+        new_cmd = []
+        count = 0
+        for i in range(len(cmd) // 2):
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        try:
+            data = self._send_command(new_cmd, crc_need=True, size=82)
+            if data:
+                a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+                response = {
+                    "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                    "Transaction buffer position": int(
+                        binascii.hexlify(bytearray(data[2:3]))
+                    ),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        [binascii.hexlify(bytearray(data[3:4]))]
+                    ),
+                    "Receipt status": AftReceiptStatus.AftReceiptStatus.get_status(
+                        [binascii.hexlify(bytearray(data[4:5]))]
+                    ),
+                    "Transfer type": AftTransferType.AftTransferType.get_status(
+                        [binascii.hexlify(bytearray(data[5:6]))]
+                    ),
+                    "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                       * self.denom,
+                    "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                         * self.denom,
+                    "Nonrestricted amount": int(
+                        binascii.hexlify(bytearray(data[16:21]))
+                    )
+                                            * self.denom,
+                    "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                    "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                    "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+                }
+
+                self.aft_unregister()
+                return response
+
+        except Exception as e:
+            self.aft_unregister()
+            self.log.error(e, exc_info=True)
+
+    def aft_clean_transaction_poll(self, register=False):
+        """Remember to loop this function AFTER calling aft_in.
+        If it raises an error or returns 'Transfer pending (not complete)'
+        you continue to execute until 'Full transfer successful'.
+        Otherwise, you break the cycle and make the request invalid.
+        """
+        if register:
+            self.aft_register()
+
+        if not self.transaction:
+            self.aft_get_last_trx()
+
+        cmd = "7202FF00"
+        count = 0
+        new_cmd = []
+        for i in range(len(cmd) // 2):
+            new_cmd.append(int(cmd[count: count + 2], 16))
+            count += 2
+
+        response = None
+        try:
+            data = self._send_command(new_cmd, crc_need=True, size=90)
+            if data:
+                a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+                response = {
+                    "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                    "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[3:4]))
+                    ),
+                    "Receipt status": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[4:5]))
+                    ),
+                    "Transfer type": AftTransferStatus.AftTransferStatus.get_status(
+                        binascii.hexlify(bytearray(data[5:6]))
+                    ),
+                    "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                       * self.denom,
+                    "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                         * self.denom,
+                    "Nonrestricted amount": int(
+                        binascii.hexlify(bytearray(data[16:21]))
+                    )
+                                            * self.denom,
+                    "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                    "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                    "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                    "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+                }
+
+            if register:
+                try:
+                    self.aft_unregister()
+                except:
+                    self.log.warning("AFT UNREGISTER ERROR: clean poll")
+
+            if hex(self.transaction)[2:-1] == response["Transaction ID"]:
+                return response
+            else:
+                if self.check_last_transaction:
+                    raise BadTransactionID(
+                        "last: %s, new:%s "
+                        % (hex(self.transaction)[2:-1], response["Transaction ID"])
+                    )
+                else:
+                    self.log.info(
+                        "last: %s, new:%s "
+                        % (hex(self.transaction)[2:-1], response["Transaction ID"])
+                    )
+        except BadCRC:
+            pass
+
+        return False
+
+    def aft_transfer_funds(
+            self,
+            transfer_code=0x00,
+            transaction_index=0x00,
+            transfer_type=0x00,
+            cashable_amount=0,
+            restricted_amount=0,
+            non_restricted_amount=0,
+            transfer_flags=0x00,
+            asset_number=b"\x00\x00\x00\x00\x00",
+            registration_key=0,
+            transaction_id="",
+            expiration=0,
+            pool_id=0,
+            receipt_data="",
+            lock_timeout=0
+    ):
+        # 72
+        cmd = [
+            0x72,
+            2 * len(transaction_id) + 53,
+            transfer_code,
+            transaction_index,
+            transfer_type,
+            self._bcd_coder_array(cashable_amount, 5),
+            self._bcd_coder_array(restricted_amount, 5),
+            self._bcd_coder_array(non_restricted_amount, 5),
+            transfer_flags,
+            asset_number,
+            self._bcd_coder_array(registration_key, 20),
+            len(transaction_id),
+            self._bcd_coder_array(expiration, 4),
+            self._bcd_coder_array(pool_id, 2),
+            len(receipt_data),
+            receipt_data,
+            self._bcd_coder_array(lock_timeout, 2)
+        ]
+
+        data = self._send_command(cmd, crc_need=True)
+        if data:
+            AftStatements.AftStatements.STATUS_MAP["transaction_buffer_position"] = int(
+                binascii.hexlify(bytearray(data[2:3]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["transfer_status"] = int(
+                binascii.hexlify(bytearray(data[3:4]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["receipt_status"] = int(
+                binascii.hexlify(bytearray(data[4:5]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["transfer_type"] = int(
+                binascii.hexlify(bytearray(data[5:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["cashable_amount"] = int(
+                binascii.hexlify(bytearray(data[6:11]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["restricted_amount"] = int(
+                binascii.hexlify(bytearray(data[11:16]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["nonrestricted_amount"] = int(
+                binascii.hexlify(bytearray(data[16:21]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["transfer_flags"] = int(
+                binascii.hexlify(bytearray(data[21:22]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = binascii.hexlify(
+                bytearray(data[22:26])
+            )
+            AftStatements.AftStatements.STATUS_MAP["transaction_id_length"] = int(
+                binascii.hexlify(bytearray(data[26:27]))
+            )
+            a = int(binascii.hexlify(bytearray(data[26:27])))
+            AftStatements.AftStatements.STATUS_MAP["transaction_id"] = str(
+                binascii.hexlify(bytearray(data[27: (27 + a + 1)]))
+            )
+            a = 27 + a + 1
+            AftStatements.AftStatements.STATUS_MAP["transaction_date"] = str(
+                binascii.hexlify(bytearray(data[a: a + 5]))
+            )
+            a = a + 5
+            AftStatements.AftStatements.STATUS_MAP["transaction_time"] = str(
+                binascii.hexlify(bytearray(data[a: a + 4]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["expiration"] = str(
+                binascii.hexlify(bytearray(data[a + 4: a + 9]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["pool_id"] = str(
+                binascii.hexlify(bytearray(data[a + 9: a + 11]))
+            )
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_cashable_amount_meter_size"
+            ] = binascii.hexlify(bytearray(data[a + 11: a + 12]))
+            b = a + int(binascii.hexlify(bytearray(data[a + 11: a + 12])))
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_cashable_amount_meter"
+            ] = binascii.hexlify(bytearray(data[a + 12: b + 1]))
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_restricted_amount_meter_size"
+            ] = binascii.hexlify(bytearray(data[b + 1: b + 2]))
+            c = b + 2 + int(binascii.hexlify(bytearray(data[b + 1: b + 2])))
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_restricted_amount_meter"
+            ] = binascii.hexlify(bytearray(data[b + 2: c]))
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_nonrestricted_amount_meter_size"
+            ] = binascii.hexlify(bytearray(data[c: c + 1]))
+            b = int(binascii.hexlify(bytearray(data[c: c + 1]))) + c
+            AftStatements.AftStatements.STATUS_MAP[
+                "cumulative_nonrestricted_amount_meter"
+            ] = binascii.hexlify(bytearray(data[c + 1:]))
+
+            return AftStatements.AftStatements.get_non_empty_status_map()
+
+        return None
+
+    def aft_get_last_trx(self):
+        cmd = [0x72, 0x02, 0xFF, 0x00]
+        data = self._send_command(cmd, crc_need=True, size=90)
+        if data:
+            try:
+                if not self.aft_get_last_transaction:
+                    raise ValueError
+
+                count = int(binascii.hexlify(data[26:27]), 16)
+                transaction = binascii.hexlify(data[27: 27 + count])
+                if transaction == "2121212121212121212121212121212121":
+                    transaction = "2020202020202020202020202020202021"
+                self.transaction = int(transaction, 16)
+
+                return self.transaction
+
+            except ValueError as e:
+                self.log.warning(e, exc_info=True)
+                self.transaction = int("2020202020202020202020202020202021", 16)
+                self.log.warning("AFT no transaction")
+
+            except Exception as e:
+                self.log.error(e, exc_info=True)
+                self.transaction = int("2020202020202020202020202020202021", 16)
+                self.log.warning("AFT no transaction")
+
+        else:
+            self.transaction = int("2020202020202020202020202020202021", 16)
+            self.log.warning("AFT no transaction")
+
+        return self.transaction
+
+    def aft_format_transaction(self, from_egm=False):
+        if from_egm:
+            self.aft_get_last_trx()
+
+        if self.transaction is None:
+            self.aft_get_last_trx()
+
+        self.transaction += 1
+        transaction = hex(self.transaction)[2:-1]
+        count = 0
+        tmp = []
+        for i in range(len(transaction) // 2):
+            tmp.append(transaction[count: count + 2])
+            count += 2
+
+        tmp.reverse()
+        for i in range(len(tmp)):
+            if int(tmp[i], 16) >= 124:
+                tmp[i] = "20"
+                tmp[i + 1] = hex(int(tmp[i + 1], 16) + 1)[2:]
+
+        tmp.reverse()
+        response = ""
+        for i in tmp:
+            response += i
+        if response == "2121212121212121212121212121212121":
+            response = "2020202020202020202020202020202021"
+
+        self.transaction = int(response, 16)
+        return response
+
+    def aft_register(self, reg_code=0x01):
+        try:
+            return self.aft_register_gaming_machine(reg_code=reg_code)
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+            return None
+
+    def aft_unregister(self, reg_code=0x80):
+        try:
+            return self.aft_register_gaming_machine(reg_code=reg_code)
+        except Exception as e:
+            self.log.error(e, exc_info=True)
+            return None
+
+    def aft_register_gaming_machine(self, reg_code=0xFF):
+        # 73
+        cmd = [0x73, 0x00, reg_code]
+
+        if reg_code == 0xFF:
+            cmd[1] = 0x01
+        else:
+            tmp = self.asset_number + self.reg_key + self.pos_id
+            cmd[1] = 0x1D
+            count = 0
+            for i in range(len(tmp) // 2):
+                cmd.append(int(tmp[count: count + 2], 16))
+                count += 2
+
+        data = self._send_command(cmd, crc_need=True, size=34)
+
+        if data:
+            AftStatements.AftStatements.STATUS_MAP[
+                "registration_status"
+            ] = binascii.hexlify(data[3:7])
+
+            AftStatements.AftStatements.STATUS_MAP["registration_key"] = str(
+                binascii.hexlify(data[7:27])
+            )
+            AftStatements.AftStatements.STATUS_MAP["POS_ID"] = str(
+                binascii.hexlify((data[27:]))
+            )
+            return AftStatements.AftStatements.get_non_empty_status_map()
+
+        return None
+
+    def aft_game_lock(self, lock_timeout=100, condition=00):
+        return self.aft_game_lock_and_status_request(
+            lock_code=0x00, lock_timeout=lock_timeout, transfer_condition=condition
+        )
+
+    def aft_game_unlock(self):
+        return self.aft_game_lock_and_status_request(lock_code=0x80)
+
+    def aft_game_lock_and_status_request(
+            self, lock_code=0x00, transfer_condition=00, lock_timeout=0
+    ):
+        # 74
+        cmd = [
+            0x74,
+            lock_code,
+            transfer_condition,
+            self._bcd_coder_array(lock_timeout, 2),
+        ]
+
+        data = self._send_command(cmd, crc_need=True, size=40)
+        if data:
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["game_lock_status"] = str(
+                binascii.hexlify(bytearray(data[6:7]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["avilable_transfers"] = str(
+                binascii.hexlify(bytearray(data[7:8]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["host_cashout_status"] = str(
+                binascii.hexlify(bytearray(data[8:9]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["AFT_status"] = str(
+                binascii.hexlify(bytearray(data[9:10]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["max_buffer_index"] = str(
+                binascii.hexlify(bytearray(data[10:11]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["current_cashable_amount"] = str(
+                binascii.hexlify(bytearray(data[11:16]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["current_restricted_amount"] = str(
+                binascii.hexlify(bytearray(data[16:21]))
+            )
+            AftStatements.AftStatements.STATUS_MAP[
+                "current_non_restricted_amount"
+            ] = str(binascii.hexlify(bytearray(data[21:26])))
+            AftStatements.AftStatements.STATUS_MAP["restricted_expiration"] = str(
+                binascii.hexlify(bytearray(data[26:29]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["restricted_pool_ID"] = str(
+                binascii.hexlify(bytearray(data[29:31]))
+            )
+
+            return AftStatements.AftStatements.get_non_empty_status_map()
+
+        return None
+
+    def aft_cancel_request(self):
+        cmd = [0x72, 0x01, 0x80]
+        self.aft_register()
+        response = None
+        data = self._send_command(cmd, crc_need=True, size=90)
+        if data:
+            a = int(binascii.hexlify(bytearray(data[26:27])), 16)
+            response = {
+                "Length": int(binascii.hexlify(bytearray(data[26:27])), 16),
+                "Transfer status": AftTransferStatus.AftTransferStatus.get_status(
+                    binascii.hexlify(bytearray(data[3:4]))
+                ),
+                "Receipt status": AftReceiptStatus.AftReceiptStatus.get_status(
+                    binascii.hexlify(bytearray(data[4:5]))
+                ),
+                "Transfer type": AftTransferType.AftTransferType.get_status(
+                    binascii.hexlify(bytearray(data[5:6]))
+                ),
+                "Cashable amount": int(binascii.hexlify(bytearray(data[6:11])))
+                                   * self.denom,
+                "Restricted amount": int(binascii.hexlify(bytearray(data[11:16])))
+                                     * self.denom,
+                "Nonrestricted amount": int(binascii.hexlify(bytearray(data[16:21])))
+                                        * self.denom,
+                "Transfer flags": binascii.hexlify(bytearray(data[21:22])),
+                "Asset number": binascii.hexlify(bytearray(data[22:26])),
+                "Transaction ID length": binascii.hexlify(bytearray(data[26:27])),
+                "Transaction ID": binascii.hexlify(bytearray(data[27: (27 + a)])),
+            }
+        try:
+            self.aft_unregister()
+        except:
+            self.log.warning("AFT UNREGISTER ERROR")
+
+        if response["Transaction ID"] == hex(self.transaction)[2:-1]:
+            return response
+
+        return False
+
+    def aft_receipt_data(self):
+        # TODO: 75
+        return NotImplemented
+
+    def aft_set_custom_ticket_data(self):
+        # TODO: 76
+        return NotImplemented
+
+    def extended_validation_status(
+            self,
+            control_mask=[0, 0],
+            status_bits=[0, 0],
+            cashable_ticket_receipt_exp=0,
+            restricted_ticket_exp=0
+    ):
+        # 7B
+        cmd = [
+            0x7B,
+            0x08,
+            control_mask,
+            status_bits,
+            self._bcd_coder_array(cashable_ticket_receipt_exp, 2),
+            self._bcd_coder_array(restricted_ticket_exp, 2),
+        ]
+
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            AftStatements.AftStatements.STATUS_MAP["asset_number"] = str(
+                binascii.hexlify(bytearray(data[2:6]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["status_bits"] = str(
+                binascii.hexlify(bytearray(data[6:8]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["cashable_ticket_receipt_exp"] = str(
+                binascii.hexlify(bytearray(data[8:10]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["restricted_ticket_exp"] = str(
+                binascii.hexlify(bytearray(data[10:]))
+            )
+
+            return AftStatements.AftStatements.get_non_empty_status_map()
+
+        return None
+
+    def set_extended_ticket_data(self):
+        # TODO: 7C
+        return NotImplemented
+
+    def set_ticket_data(self):
+        # TODO: 7D
+        return NotImplemented
+
+    def current_date_time(self):
+        # 7E
+        cmd = [0x7E]
+        data = self._send_command(cmd, crc_need=False, size=11)
+        if data:
+            data = str(binascii.hexlify(bytearray(data[1:8])))
+            return datetime.datetime.strptime(data, "%m%d%Y%H%M%S")
+
+        return None
+
+    def receive_date_time(self, dates, times):
+        # 7F
+        cmd = [0x7F]
+        fmt_cmd = "" + dates.replace(".", "") + times.replace(":", "") + "00"
+        count = 0
+        for i in range(len(fmt_cmd) // 2):
+            cmd.append(int(fmt_cmd[count: count + 2], 16))
+            count += 2
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    @staticmethod
+    def receive_progressive_amount():
+        # TODO: 80
+        return NotImplemented
+
+    @staticmethod
+    def cumulative_progressive_wins():
+        # TODO: 83
+        return NotImplemented
+
+    @staticmethod
+    def progressive_win_amount():
+        # TODO: 84
+        return NotImplemented
+
+    @staticmethod
+    def sas_progressive_win_amount():
+        # TODO: 85
+        return NotImplemented
+
+    @staticmethod
+    def receive_multiple_progressive_levels():
+        # TODO: 86
+        return NotImplemented
+
+    @staticmethod
+    def multiple_sas_progressive_win_amounts():
+        # TODO: 87
+        return NotImplemented
+
+    def initiate_legacy_bonus_pay(self, money, tax="00", games=None, ):
+        # 8A
+        if not games:
+            for i in range(3):
+                try:
+                    games = self.selected_game_number(in_hex=False)
+                except:
+                    pass
+                if not games:
+                    time.sleep(0.04)
+                else:
+                    break
+
+        if not games or games <= 0:
+            return None
+
+        t_cmd = str(int(round(money / self.denom, 2)))
+        t_cmd = ("0" * (8 - len(t_cmd)) + t_cmd) + tax
+
+        cmd = [0x8A]
+        count = 0
+        for i in range(len(t_cmd) // 2):
+            cmd.append(int(t_cmd[count: count + 2], 16))
+            count += 2
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    @staticmethod
+    def initiate_multiplied_jackpot_mode():
+        # TODO: 8B
+        return NotImplemented
+
+    @staticmethod
+    def enter_exit_tournament_mode():
+        # TODO: 8C
+        return NotImplemented
+
+    @staticmethod
+    def card_info():
+        # TODO: 8E
+        return NotImplemented
+
+    @staticmethod
+    def physical_reel_stop_info():
+        # TODO: 8F
+        return NotImplemented
+
+    @staticmethod
+    def legacy_bonus_win_info():
+        # TODO: 90
+        return NotImplemented
+
+    def remote_handpay_reset(self, ):
+        # 94
+        cmd = [0x94]
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    @staticmethod
+    def tournament_games_played():
+        # TODO: 95
+        return NotImplemented
+
+    @staticmethod
+    def tournament_games_won():
+        # TODO: 96
+        return NotImplemented
+
+    @staticmethod
+    def tournament_credits_wagered():
+        # TODO: 97
+        return NotImplemented
+
+    @staticmethod
+    def tournament_credits_won():
+        # TODO: 98
+        return NotImplemented
+
+    @staticmethod
+    def meters_95_98():
+        # TODO: 99
+        return NotImplemented
+
+    def legacy_bonus_meters(self, denom=True, n=0):
+        # 9A
+        cmd = [0x9A, ((n >> 8) & 0xFF), (n & 0xFF)]
+        data = self._send_command(cmd, crc_need=True, size=18)
+        if data:
+            if not denom:
+                Meters.Meters.STATUS_MAP["game number"] = int(
+                    binascii.hexlify(bytearray(data[2:3]))
+                )
+                Meters.Meters.STATUS_MAP["deductible"] = int(
+                    binascii.hexlify(bytearray(data[3:7]))
+                )
+                Meters.Meters.STATUS_MAP["non-deductible"] = int(
+                    binascii.hexlify(bytearray(data[7:11]))
+                )
+                Meters.Meters.STATUS_MAP["wager match"] = int(
+                    binascii.hexlify(bytearray(data[11:15]))
+                )
+            else:
+                Meters.Meters.STATUS_MAP["game number"] = int(
+                    binascii.hexlify(bytearray(data[2:3]))
+                )
+                Meters.Meters.STATUS_MAP["deductible"] = round(
+                    int(binascii.hexlify(bytearray(data[3:7]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["non-deductible"] = round(
+                    int(binascii.hexlify(bytearray(data[7:11]))) * self.denom, 2
+                )
+                Meters.Meters.STATUS_MAP["wager match"] = round(
+                    int(binascii.hexlify(bytearray(data[11:15]))) * self.denom, 2
+                )
+            return Meters.Meters.get_non_empty_status_map()
+
+        return None
+
+    def toggle_autorebet(self, val=True):
+        cmd = [0xAA]
+        if not val:
+            # AA00
+            cmd.append(0x00)
+        else:
+            # AA01
+            cmd.append(0x01)
+
+        if self._send_command(cmd, True, crc_need=True) == self.address:
+            return True
+
+        return False
+
+    def enabled_features(self, game_number=0):
+        # A0
+        # FIXME: This makes no sense
+        # Basically tells which feature a selected games has. - Antonio
+
+        cmd = [0xA0, self._bcd_coder_array(game_number, 2)]
+        data = self._send_command(cmd, True, crc_need=True)
+        if data:
+            AftStatements.AftStatements.STATUS_MAP["game_number"] = str(
+                binascii.hexlify(bytearray(data[1:3]))
+            )
+            AftStatements.AftStatements.STATUS_MAP["features_1"] = data[3]
+            AftStatements.AftStatements.STATUS_MAP["features_2"] = data[4]
+            AftStatements.AftStatements.STATUS_MAP["features_3"] = data[5]
+            GameFeatures.GameFeatures.STATUS_MAP[
+                "game_number"
+            ] = AftStatements.AftStatements.get_status("game_number")
+            if data[3] & 0b00000001:
+                GameFeatures.GameFeatures.STATUS_MAP["jackpot_multiplier"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["jackpot_multiplier"] = 0
+
+            if data[3] & 0b00000010:
+                GameFeatures.GameFeatures.STATUS_MAP["AFT_bonus_awards"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["AFT_bonus_awards"] = 0
+
+            if data[3] & 0b00000100:
+                GameFeatures.GameFeatures.STATUS_MAP["legacy_bonus_awards"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["legacy_bonus_awards"] = 0
+
+            if data[3] & 0b00001000:
+                GameFeatures.GameFeatures.STATUS_MAP["tournament"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["tournament"] = 0
+
+            if data[3] & 0b00010000:
+                GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["validation_extensions"] = 0
+
+            GameFeatures.GameFeatures.STATUS_MAP["validation_style"] = (
+                    data[3] & 0b01100000 >> 5
+            )
+
+            if data[3] & 0b10000000:
+                GameFeatures.GameFeatures.STATUS_MAP["ticket_redemption"] = 1
+            else:
+                GameFeatures.GameFeatures.STATUS_MAP["ticket_redemption"] = 0
+
+            return GameFeatures.GameFeatures.get_non_empty_status_map()
+
+        return None
+
+    @staticmethod
+    def cashout_limit():
+        # TODO: A4
+        return NotImplemented
+
+    @staticmethod
+    def enable_jackpot_handpay_reset_method():
+        # TODO: A8
+        return NotImplemented
+
+    @staticmethod
+    def extended_meters_game_alt():
+        # TODO: AF
+        return NotImplemented
+
+    @staticmethod
+    def multi_denom_preamble():
+        # TODO: B0
+        return NotImplemented
+
+    @staticmethod
+    def current_player_denomination():
+        # TODO: B1
+        return NotImplemented
+
+    @staticmethod
+    def enabled_player_denominations():
+        # TODO: B2
+        return NotImplemented
+
+    @staticmethod
+    def token_denomination():
+        # TODO: B3
+        return NotImplemented
+
+    @staticmethod
+    def wager_category_info():
+        # TODO: B4
+        return NotImplemented
+
+    @staticmethod
+    def extended_game_info(n=1):
+        # TODO: B5
+        return NotImplemented
+
+    @staticmethod
+    def event_response_to_long_poll():
+        # TODO: FF
+        return NotImplemented
+
+    def _bcd_coder_array(self, value=0, length=4):
+        return self._int_to_bcd(value, length)
+
+    @staticmethod
+    def _int_to_bcd(number=0, length=5, ):
+        n = m = bval = 0
+        p = length - 1
+        result = []
+        for i in range(0, length):
+            result.extend([0x00])
+
+        while p >= 0:
+            if number != 0:
+                digit = number % 10
+                number = number / 10
+                m = m + 1
+            else:
+                digit = 0
+
+            if n & 1:
+                bval |= digit << 4
+                result[p] = bval
+                p = p - 1
+                bval = 0
+            else:
+                bval = digit
+
+            n = n + 1
+
+        return result

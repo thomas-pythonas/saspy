@@ -1,0 +1,21 @@
+connection:
+  serial_port: /dev/ttyUSB0
+  timeout: 2
+  baudrate: 19200
+  infinite: False
+
+events:
+  poll_timeout: 0.5
+  poll_address: 0x82 # Standard Poll Address - On most the machines | Try 0x80 if 82 dont work
+
+debug:
+  level: DEBUG #    CRITICAL | ERROR | WARNING | INFO | DEBUG | NOTSET
+
+security:
+  key: 44
+
+machine:
+  pos_id: "B374A402"
+  reg_key: "0000000000000000000000000000000000000000"
+  asset_number: "15cd5b07" # Asset Magic Number - Works on every machine !
+  denomination: 0.01

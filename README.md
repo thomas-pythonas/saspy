@@ -1,13 +1,34 @@
-# saspy
-Slots accounting system protocol based on Python for arm architecture
+# SASPY
+[![Documentation Status](https://readthedocs.org/projects/saspy/badge/?version=latest)](https://saspy.readthedocs.io/en/latest/?badge=latest)
 
-The SAS library was made using python and can be used for linux-based single-board computers (Raspberry, Orange PI, Banana Pi).
-The Library is used for connecting to EGM by RS-232 protocol and for receiving and processing some data of SAS-protocol.
+<p align="center">
+<img src="https://github.com/zacharytomlinson/saspy/assets/15037424/e8a8efc8-e83f-44f9-9ca1-7543a280e6b3" width="300" height="auto">
+</p>
+Slots Accounting System (SAS) Protocol is a standard when comes to Slot Machine and VLTs. And because we were bored and with not enough things to do we decided to build this library
 
-SAS  (Slot  Accounting  System)  protocol  is  the  de  facto  casino communications  standards  designed  to  automate  slot  machine  meter  reporting  and event  logging,  player  tracking,  bonusing,  ticketing  and  cashless  gaming. 
+## Scope
+This project, once reached a stable release, will be published on [PyPi](https://pypi.org/) as a Python package.
 
-The EGM and SMIB communicate each other in SAS protocol standards, whereas  communication  between  the  SMIB  and  host  is  not  standardized,  which interoperability  and  standards  issue  is  resolved  by  new  standards,  G2S  (Game to System)  protocol.  SMIB also  provides touch  screen and  card readers  for AFT  and player tracking service. 
+# Documentation
+Since this library is still under heavy development (but at least is working !) comments are still not complete and there is a draft of documentation into `docs/` folder. 
 
-The  System  architecture  of  SAS  Protocol:  SAS  protocol  is used  for  communication between EGM and SMIB. SAS protocol consists of 3 layers of physical layer, link layer, and application layer. The  physical  layer  leverages  RS-232  at  9.2kbps  of  1  start  bit,  8  data  bits,  and 1wakeup bit  and 1 stop bit. The  wakeup bit is used for  signaling the frame start byte and  needs  special  care  in  implementation  (described  later).  Master-slave  polling mechanism  is  used  for  the  medium  access  control  similar  to  USB  and  traditional remote terminal system. Each EGM is assigned a link address of 1 to 127. ‘0’ is used for  broadcasting.  The  polling  rate ranges  from 200ms  to 5s  but can  be reduced  to 40ms when EGM support RTE (real time event) mode.   SMIB uses two different types of polls, GP (general poll) and LP (long poll). GP is one  byte  EGM  address  with  wakeup  bit  set,  and  polls  events  generated  in  the receiving EGM system. The  receiving  EGM  should  respond with 1 byte event code, which is  called  ‘exception’  in  the specification.  The  exceptions include  non-priority exceptions such as no event, game start, game end, system tilt, and priority exceptions such as  handpay condition, ticket out, ticket in,  and  fund-transfer request.  LP  is used for  SMIB  to send  command  to  EGMs and  classified  into  R(read)-type,  S(set)-type, M(multi-game)-type, and G (global)-type. LP starts with 1 byte command value with wakeup bit set, and the lengths of LP are fixed or variable depending on the command. All  LP  except  R-type  contains  CRC-16  (cyclic  redundancy  check)  for  bit  error detection. The  response frame uses the similar format but with wakeup bit off. SMIB use implied ACK mechanism for confirming the receipt. 
+All the latest documentation regarding this library can be found on [Read The Docs](https://saspy.readthedocs.io/)
 
-SAS Protocol Application Functions: ROM signature request, Metric, Progressive broadcast, Tournament operation, RTE (real time event), Bonus Controller, Jackpot hand-pay, TITO(Ticket in/out), Multi-denomination, AFT, Component Authentication
+In the meantime feel free to checkout the [WiKi of this project](https://github.com/zacharytomlinson/saspy/wiki) where you are gonna find response and solutions to common problems we faced during our journey
+
+# Contribute
+Not many rules. Fork the repo, write your code, create pull request. Remember to use black for formatting and give a shot to pylint.
+
+## Issue & Implementation
+Please, use the [Issues tab](https://github.com/zacharytomlinson/saspy/issues) to propose an eventual enhancement or to submit an issue.
+
+# Authors
+This project was initiated by [thomas-pythonas](https://github.com/thomas-pythonas) in 2018 and has no update since then.
+
+Current author and mantainer are:
+
+- [Zachary Tomlinson](https://github.com/zacharytomlinson)
+- [Antonio D'Angelo](https://github.com/well-it-wasnt-me)
+
+# Thanks to
+* [Grigor Kolev](https://github.com/dedalgr) for his precious help
